@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Atmel Studio Solution File, Format Version 11.00
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "QAM_Receiver-EduBoard", "QAM_Receiver-EduBoard\QAM_Receiver-EduBoard.cproj", "{EDD93CEB-1FF9-49BE-B410-F68787FEBA8E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|AVR = Debug|AVR
+		Release|AVR = Release|AVR
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{EDD93CEB-1FF9-49BE-B410-F68787FEBA8E}.Debug|AVR.ActiveCfg = Debug|AVR
+		{EDD93CEB-1FF9-49BE-B410-F68787FEBA8E}.Debug|AVR.Build.0 = Debug|AVR
+		{EDD93CEB-1FF9-49BE-B410-F68787FEBA8E}.Release|AVR.ActiveCfg = Release|AVR
+		{EDD93CEB-1FF9-49BE-B410-F68787FEBA8E}.Release|AVR.Build.0 = Release|AVR
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

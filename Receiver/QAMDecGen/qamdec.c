@@ -2,7 +2,7 @@
 * qamdec.c
 *
 * Created: 05.05.2020 16:38:25
-*  Author: Chaos
+*  Author: Chaos Philipp
 */ 
 
 #include "avr_compiler.h"

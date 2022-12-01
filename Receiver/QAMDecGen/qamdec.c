@@ -2,7 +2,7 @@
 * qamdec.c
 *
 * Created: 05.05.2020 16:38:25
-*  Author: Chaos Philipp
+*  Author: Chaos Pascal Philipp
 */ 
 
 #include "avr_compiler.h"
@@ -81,6 +81,28 @@ void vQuamDec(void* pvParameters)
 		vTaskDelay( 2 / portTICK_RATE_MS );
 	}
 }
+
+/*
+speicher[0] = bufferelement[0];
+speicher[1] = speicher[0];
+speicher[2] = speicher[1];
+speicher[3] = speicher[2];
+if(speicher[0] > (AD-WERT/1./) {	// Störungen filtern 
+	if(speicher[0] > speicher[3]) {	// steigend erkennen und dass langsam interessant wird		// was passiert bei 0 -> direkt peak dann fallend? Geht nicht
+						// else if(wenn direkt auf nähe maximum und dann (fallende Flanke?)
+		if (bufferelement[a] > posPeakelement) {
+			posPeakelement = bufferelement[a];										// peakwert speichern
+			posPeak[sigCount] = runner;												// durchlaufzählerwert speichern (fehleranfällig, da mit Task = Zeitproblematik)
+						// speichern addresse in Array								// von 32 möglichen Plätzen an x/32
+		}
+						// fallende Flanke erkennen, posPeak[sigCount] +1 im array für nächsten Peak
+	}
+}
+*/
+
+/*
+posPeak[x+1] - posPeak[x] = Abstand => innerhalb +- 8 feldern?
+*/
 
 void fillDecoderQueue(uint16_t buffer[NR_OF_SAMPLES])
 {

@@ -43,37 +43,29 @@ void vQuamDec(void* pvParameters)
 	uint16_t posPeak[18] = {NULL};
 	uint16_t negPeak = 0;
 	uint64_t runner = 0;													// runner, just counts up by Nr_of_samples to 2^64
+	uint16_t speicher[3] = {NULL};											// speicher für peakfinder
+	uint16_t adWert = 2200;													// maxwert TBD
 	int sigCount = 0;
 	
 	xEventGroupWaitBits(evDMAState, DMADECREADY, false, true, portMAX_DELAY);
 	for(;;) {
 		while(uxQueueMessagesWaiting(decoderQueue) > 0) {
 			if(xQueueReceive(decoderQueue, &bufferelement[0], portMAX_DELAY) == pdTRUE) {
-				for(int a = 0; a < NR_OF_SAMPLES; a++) 	{
-					runner++;
-					if (a == 0) {
-						negPeakelement = 10000;
-						posPeakelement = 0;
-						//posPeak = 0;
-						//negPeak = 0;
-					}
-					if (bufferelement[a] > posPeakelement) {
-						posPeakelement = bufferelement[a];
-						posPeak[sigCount] = runner;													// to save the peakround
-					}
-						if (bufferelement[a] <= 0.90 * posPeakelement ) {												
-							posPeakelement = 0;
-							sigCount++;																// to save the 18Bit needed for peak
-							if (sigCount >=18) {
-								sigCount = 0;
-							}
-						}
-					//}
-					if (bufferelement[a] < negPeakelement) {
-  						negPeakelement = bufferelement[a];
-  						negPeak = a;
-  					}
+				
+				speicher[3] = speicher[2];	
+				speicher[2] = speicher[1];
+				speicher[1] = speicher[0];
+				speicher[0] = bufferelement[0];
+									
+				if (speicher[3] < speicher[0]) {							// um eine steigende Flanke zu erkennen; Wertespeicher
+					// set Bit x											// 
 				}
+				if(speicher[0] > (adWert/1.7)) {							// Störungen im Idle filtern; bei Idle in ca 1/2 MaxSpannung
+					// set Bit y											// 
+				}
+		
+				
+				
 				//vTaskDelay(10);
 				//Decode Buffer
 			}
@@ -82,27 +74,6 @@ void vQuamDec(void* pvParameters)
 	}
 }
 
-/*
-speicher[0] = bufferelement[0];
-speicher[1] = speicher[0];
-speicher[2] = speicher[1];
-speicher[3] = speicher[2];
-if(speicher[0] > (AD-WERT/1./) {	// Störungen filtern 
-	if(speicher[0] > speicher[3]) {	// steigend erkennen und dass langsam interessant wird		// was passiert bei 0 -> direkt peak dann fallend? Geht nicht
-						// else if(wenn direkt auf nähe maximum und dann (fallende Flanke?)
-		if (bufferelement[a] > posPeakelement) {
-			posPeakelement = bufferelement[a];										// peakwert speichern
-			posPeak[sigCount] = runner;												// durchlaufzählerwert speichern (fehleranfällig, da mit Task = Zeitproblematik)
-						// speichern addresse in Array								// von 32 möglichen Plätzen an x/32
-		}
-						// fallende Flanke erkennen, posPeak[sigCount] +1 im array für nächsten Peak
-	}
-}
-*/
-
-/*
-posPeak[x+1] - posPeak[x] = Abstand => innerhalb +- 8 feldern?
-*/
 
 void fillDecoderQueue(uint16_t buffer[NR_OF_SAMPLES])
 {

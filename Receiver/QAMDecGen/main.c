@@ -35,6 +35,7 @@ extern void vApplicationIdleHook( void );
 void vLedBlink(void *pvParameters);
 void vGetPeak( void *pvParameters );
 void vGetDifference( void *pvParameters);
+void dataPointer(int mode, int adressNr);
 
 TaskHandle_t handler;
 
@@ -59,6 +60,7 @@ int main(void)
 	initADC();
 	initADCTimer();
 	initDecDMA();
+	dataPointer(0,0);
 	
 	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 2, NULL);		// 2B commented out during real-testing, saving some space and further
 	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 1, NULL);
@@ -98,26 +100,29 @@ void vGetDifference( void *pvParameters ) {
 	vTaskDelay( 100 / portTICK_RATE_MS );
 	//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nötig
 }
-	
-/* Aktuell nur zur Speicherung von diversen ideen
-speicher[0] = bufferelement[0];
-speicher[1] = speicher[0];
-speicher[2] = speicher[1];
-speicher[3] = speicher[2];
-if(speicher[0] > (AD-WERT/1.7)) {	// Störungen filtern 
-	if(speicher[0] > speicher[3]) {	// steigend erkennen und dass langsam interessant wird		// was passiert bei 0 -> direkt peak dann fallend? Geht nicht
-						// else if(wenn direkt auf nähe maximum und dann (fallende Flanke?)
-		if (bufferelement[a] > posPeakelement) {
-			posPeakelement = bufferelement[a];										// peakwert speichern
-			posPeak[sigCount] = runner;												// durchlaufzählerwert speichern (fehleranfällig, da mit Task = Zeitproblematik)
-						// speichern addresse in Array								// von 32 möglichen Plätzen an x/32
-		}
-						// fallende Flanke erkennen, posPeak[sigCount] +1 im array für nächsten Peak
-	}
+
+void dataPointer(int mode, int adressNr) {			// write blockierter Bereich, reading erlaubt nicht blockierter bereich, umgekehrt warten, lesen weniger relevant
+	static uint16_t data2bB[22][32];
+	int adress = adressNr;
+	//uint16_t data[32] = dataIn[32];
+	switch (mode) {
+		case 0:				// case init
+			//memset(data2bB, 0, sizeof(data2bB[22][32]));					// doesnt work so far
+			adressNr = 0;
+			//data = {NULL};
+			break;
+		case 1:			// write data to adress from vQamDec
+		
+			return true;
+			//break;
+		case 2:			// read data in decoder
+		
+			return true;
+			//break;
+		case -1:				// wenn daten gelesen und verwertet (sofern nicht neue daten bereits geschrieben) kann ignoriert werden wenn nur lesen wenn fertig gefüllt
+		
+			break;
+		default :
+			break;
+	} 
 }
-*/
-
-/*
-posPeak[x+1] - posPeak[x] = Abstand => innerhalb +- 8 feldern?
-*/
-

@@ -40,7 +40,7 @@ void vQuamDec(void* pvParameters)
 	uint16_t bufferelement[NR_OF_SAMPLES];									// 32 Samples max
 	uint16_t negPeakelement/*[64]*/= 0;										// 64 Samples
 	uint16_t posPeakelement = 0;
-	uint16_t posPeak[18] = {NULL};
+	uint16_t posPeak[22] = {NULL};
 	uint16_t negPeak = 0;
 	uint64_t runner = 0;													// runner, just counts up by Nr_of_samples to 2^64
 	uint16_t speicher[3] = {NULL};											// speicher für peakfinder

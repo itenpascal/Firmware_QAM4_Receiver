@@ -104,9 +104,10 @@ void GetDifference( void *pvParameters ) {
 }
 
 void dataPointer(int mode, int adressNr, uint16_t *data) {			// write blockierter Bereich, reading erlaubt nicht blockierter bereich, umgekehrt warten, lesen weniger relevant
-	static uint16_t data2bB[22][32];
+	static uint16_t data2bB[28][32];
 	int adress = adressNr;
-	//static 
+	uint16_t *data1 = &data;
+	//static
 	//uint16_t dataWrite[32] = { 0 };
 	//uint16_t data[32] = dataIn[32];
 	switch (mode) {
@@ -115,24 +116,57 @@ void dataPointer(int mode, int adressNr, uint16_t *data) {			// write blockierte
 			//data = {NULL};
 			break;
 		case 1:				// write data to adress from vQamDec
-			for (int a = 0; a >= 31; a++) {
-				data2bB[adress][a] = &data + a;
-			}
+			//data2bB = **data;
+// 			for (int a = 0; a >= 31; a++) {
+// 				data2bB[adress][a] = data[adress][a];
+// 			}
 			return true;
 			//break;
 		case 2:				// read data in decoder
-		
+
 			return true;
 			//break;
 		case -1:				// wenn daten gelesen und verwertet (sofern nicht neue daten bereits geschrieben) kann ignoriert werden wenn nur lesen wenn fertig gefüllt
-		
+
 			break;
 		default :
 			break;
-	} 
+	}
 }
 
 void vGetData( void *pvParameters ) {
 	
 	vTaskDelay( 10 / portTICK_RATE_MS );
 }
+
+
+// void dataPointer(int mode, int adressNr, uint16_t **data) {			// write blockierter Bereich, reading erlaubt nicht blockierter bereich, umgekehrt warten, lesen weniger relevant
+// 	static uint16_t data2bB[28][32];
+// 	int adress = adressNr;
+// 	
+// 	//static 
+// 	//uint16_t dataWrite[32] = { 0 };
+// 	//uint16_t data[32] = dataIn[32];
+// 	switch (mode) {
+// 		case 0:				// case init
+// 			adressNr = 0;
+// 			//data = {NULL};
+// 			break;
+// 		case 1:				// write data to adress from vQamDec
+// 			//data2bB = **data;
+// 			for (int a = 0; a >= 31; a++) {
+// 				data2bB[adress][a] = data[adress][a];
+// 			}
+// 			return true;
+// 			//break;
+// 		case 2:				// read data in decoder
+// 		
+// 			return true;
+// 			//break;
+// 		case -1:				// wenn daten gelesen und verwertet (sofern nicht neue daten bereits geschrieben) kann ignoriert werden wenn nur lesen wenn fertig gefüllt
+// 		
+// 			break;
+// 		default :
+// 			break;
+// 	} 
+// }

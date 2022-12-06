@@ -33,9 +33,10 @@
 
 extern void vApplicationIdleHook( void );
 void vLedBlink(void *pvParameters);
-void vGetPeak( void *pvParameters );
-void vGetDifference( void *pvParameters);
-void dataPointer(int mode, int adressNr);
+//void GetPeak( void *pvParameters );
+//void GetDifference( void *pvParameters);
+void vGetData( void *pvParameters);
+void dataPointer(int mode, int adressNr, uint16_t *data);
 
 TaskHandle_t handler;
 
@@ -60,12 +61,13 @@ int main(void)
 	initADC();
 	initADCTimer();
 	initDecDMA();
-	dataPointer(0,0);
+	//dataPointer(0,0);
 	
 	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 2, NULL);		// 2B commented out during real-testing, saving some space and further
 	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 1, NULL);
-	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
-	xTaskCreate(vGetDifference, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
+	//xTaskCreate(GetPeak, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
+	//xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
+	xTaskCreate(vGetData, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
 
 
 	vDisplayClear();
@@ -77,7 +79,7 @@ int main(void)
 	return 0;
 }
 
-void vGetPeak( void *pvParameters ) {												// Peaks aus dem Array mit allen 22 Wellen lesen und diese in einem Weiteren Array abspeichern
+void GetPeak( void *pvParameters ) {												// Peaks aus dem Array mit allen 22 Wellen lesen und diese in einem Weiteren Array abspeichern
 	uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 	// How to get pointeradress[0] from different Task?
 	// Mutex damit diese Daten gesperrt sind während Bearbeitung
@@ -95,27 +97,30 @@ void vGetPeak( void *pvParameters ) {												// Peaks aus dem Array mit alle
 	// vTaskSuspend;																// Damit keine Resourcen besetzt wenn nicht nötig
 }
 
-void vGetDifference( void *pvParameters ) {
+void GetDifference( void *pvParameters ) {
 	
 	vTaskDelay( 100 / portTICK_RATE_MS );
 	//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nötig
 }
 
-void dataPointer(int mode, int adressNr) {			// write blockierter Bereich, reading erlaubt nicht blockierter bereich, umgekehrt warten, lesen weniger relevant
+void dataPointer(int mode, int adressNr, uint16_t *data) {			// write blockierter Bereich, reading erlaubt nicht blockierter bereich, umgekehrt warten, lesen weniger relevant
 	static uint16_t data2bB[22][32];
 	int adress = adressNr;
+	//static 
+	//uint16_t dataWrite[32] = { 0 };
 	//uint16_t data[32] = dataIn[32];
 	switch (mode) {
 		case 0:				// case init
-			//memset(data2bB, 0, sizeof(data2bB[22][32]));					// doesnt work so far
 			adressNr = 0;
 			//data = {NULL};
 			break;
-		case 1:			// write data to adress from vQamDec
-		
+		case 1:				// write data to adress from vQamDec
+			for (int a = 0; a >= 31; a++) {
+				data2bB[adress][a] = &data + a;
+			}
 			return true;
 			//break;
-		case 2:			// read data in decoder
+		case 2:				// read data in decoder
 		
 			return true;
 			//break;
@@ -125,4 +130,9 @@ void dataPointer(int mode, int adressNr) {			// write blockierter Bereich, readi
 		default :
 			break;
 	} 
+}
+
+void vGetData( void *pvParameters ) {
+	
+	vTaskDelay( 10 / portTICK_RATE_MS );
 }

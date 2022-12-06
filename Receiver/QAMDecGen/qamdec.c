@@ -57,11 +57,12 @@ void vQuamDec(void* pvParameters)
 				speicher[1] = speicher[0];
 				speicher[0] = bufferelement[0];
 									
-				if (speicher[3] < speicher[0]) {							// um eine steigende Flanke zu erkennen; Wertespeicher
-					// set Bit x											// 
-				}
+				//if (speicher[3] < speicher[0]) {							// um eine steigende Flanke zu erkennen; Wertespeicher
+				//	// set Bit x											// 
+				//}
 				if(speicher[0] > (adWert/1.7)) {							// Störungen im Idle filtern; bei Idle in ca 1/2 MaxSpannung
 					// set Bit y											// 
+					// Daten übermitteln starten 22x 
 				}
 		
 				

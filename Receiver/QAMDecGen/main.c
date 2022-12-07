@@ -36,12 +36,13 @@ void vLedBlink(void *pvParameters);
 //void GetPeak( void *pvParameters );
 //void GetDifference( void *pvParameters);
 void vGetData( void *pvParameters);
-void dataPointer(int mode, int adressNr, uint16_t *data);
+//void dataPointer(int mode, int adressNr, uint16_t data[30][32]);
+uint16_t *dataPointer(int mode, uint16_t data[15][32]);
 
 TaskHandle_t handler;
 
-uint16_t array1[28][32] = {NULL};	// zwischenlösung für 22 Waves und je 32Werte für weiterbearbeitung; sollte durch den Queue gefüllt werden
-uint16_t array2[28] = {NULL};		// den arrayplatz speichern an welcher Stelle der Peak ist für reveserse engineering welcher Bitwert
+uint16_t array1[28][32] = {NULL};	// zwischenlï¿½sung fï¿½r 22 Waves und je 32Werte fï¿½r weiterbearbeitung; sollte durch den Queue gefï¿½llt werden
+uint16_t array2[28] = {NULL};		// den arrayplatz speichern an welcher Stelle der Peak ist fï¿½r reveserse engineering welcher Bitwert
 
 void vApplicationIdleHook( void )
 {	
@@ -67,7 +68,7 @@ int main(void)
 	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 1, NULL);
 	//xTaskCreate(GetPeak, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
 	//xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
-	xTaskCreate(vGetData, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
+	xTaskCreate(vGetData, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);		// https://www.mikrocontroller.net/topic/1198
 
 
 	vDisplayClear();
@@ -80,30 +81,30 @@ int main(void)
 }
 
 void GetPeak( void *pvParameters ) {												// Peaks aus dem Array mit allen 22 Wellen lesen und diese in einem Weiteren Array abspeichern
-	uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
+	uint16_t actualPeak = 0;														// Zwischenspeicher des hï¿½chsten Werts
 	// How to get pointeradress[0] from different Task?
-	// Mutex damit diese Daten gesperrt sind während Bearbeitung
+	// Mutex damit diese Daten gesperrt sind wï¿½hrend Bearbeitung
 	for (int a = 0; a <= 27; a++) {													// for 22 waves with data
 		for (int b = 0; b <= 31; b++) {												// for 32 samples per wave
-			if(array1[a][b] > actualPeak) {											// Finden vom Höchstwert der Welle das jeweils nur bei dem Höchstwert der steigenden Welle
-				actualPeak = array1[a][b];											// übergabe vom neuen Höchstwert
-				array2[a] = b;														// Position vom Höchstwert der welle wird gespeichert
+			if(array1[a][b] > actualPeak) {											// Finden vom Hï¿½chstwert der Welle das jeweils nur bei dem Hï¿½chstwert der steigenden Welle
+				actualPeak = array1[a][b];											// ï¿½bergabe vom neuen Hï¿½chstwert
+				array2[a] = b;														// Position vom Hï¿½chstwert der welle wird gespeichert
 			}
-			actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
+			actualPeak = 0;															// Fï¿½r nï¿½chste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
 		}
 		vTaskDelay(100/ portTICK_RATE_MS );
 	}
 	// Mutex Ende
-	// vTaskSuspend;																// Damit keine Resourcen besetzt wenn nicht nötig
+	// vTaskSuspend;																// Damit keine Resourcen besetzt wenn nicht nï¿½tig
 }
 
-void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den höchstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.
+void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den hï¿½chstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.
 	uint32_t TimeTable[32] = [3125,6250,9375,12500,15625,18750,21875,25000,		// TimeTable wo die MessPunkte in 10^-8 Sekunden hinterlegt sind.
 							  28125,31250,34375,37500,40625,43750,46875,50000,
 							  53125,56250,59375,62500,65625,68750,71875,75000,
-							  78125,81250,84375,87500,90625,93750,96875,100000];		// Wir warscheindlich nicht benötigt 06.12.2022 PS
-	uint32_t HoechstwertPos1 = 0;													// Variable für aktuelle Position vom Höchstwert
-	uint32_t HoechstwertPos2 = 0;													// Variabel für nächste Position Höchstwert	
+							  78125,81250,84375,87500,90625,93750,96875,100000];		// Wir warscheindlich nicht benï¿½tigt 06.12.2022 PS
+	uint32_t HoechstwertPos1 = 0;													// Variable fï¿½r aktuelle Position vom Hï¿½chstwert
+	uint32_t HoechstwertPos2 = 0;													// Variabel fï¿½r nï¿½chste Position Hï¿½chstwert	
 	uint32_t DifferenzPos = 0;
 	uint8_t  WellenWert[28] = {NULL};												// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 01 10 11 pro welle
 	
@@ -187,39 +188,89 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	
 	
 	vTaskDelay( 100 / portTICK_RATE_MS );
-	//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nötig
+	//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nï¿½tig
 }
 
-void dataPointer(int mode, int adressNr, uint16_t *data) {			// write blockierter Bereich, reading erlaubt nicht blockierter bereich, umgekehrt warten, lesen weniger relevant
-	static uint16_t data2bB[22][32];
-	int adress = adressNr;
-	//static 
-	//uint16_t dataWrite[32] = { 0 };
-	//uint16_t data[32] = dataIn[32];
+uint16_t *dataPointer(int mode, uint16_t data[15][32]) {
+	static uint16_t speicher;
 	switch (mode) {
-		case 0:				// case init
-			adressNr = 0;
-			//data = {NULL};
-			break;
-		case 1:				// write data to adress from vQamDec
-			for (int a = 0; a >= 31; a++) {
-				data2bB[adress][a] = &data + a;
-			}
-			return true;
+		case 0:			// write 
+			speicher = &data[15][32];
+			return 0;
 			//break;
-		case 2:				// read data in decoder
-		
-			return true;
+		case 1:			// read 
+			return speicher;
 			//break;
-		case -1:				// wenn daten gelesen und verwertet (sofern nicht neue daten bereits geschrieben) kann ignoriert werden wenn nur lesen wenn fertig gefüllt
-		
+		default:
 			break;
-		default :
-			break;
-	} 
+	}	
 }
+
+// void dataPointer(int mode, int adressNr, uint16_t data[30][32]) {			// write blockierter Bereich, reading erlaubt nicht blockierter bereich, umgekehrt warten, lesen weniger relevant
+// 	static uint16_t data2bB[30][32];
+// 	int adress = adressNr;
+// 	uint16_t data1 = &data[30][32];
+// 	static int adressWrite = 0;
+// 	if (mode = 1) {
+// 		adressWrite = mode;	// speicher wo schreiben letzte Runde war
+// 	}
+// 	switch (mode) {
+// 		case 0:				// case init
+// 			adressNr = 0;
+// 			//data = {NULL};
+// 			break;
+// 		case 1:				// write data to adress from vQamDec
+// //  			for (int a = 0; a >= 31; a++) {
+// //  				data2bB[adress][a] = data[adress][a];
+// //  			}
+// 			return true;
+// 			//break;
+// 		case 2:				// read data in decoder
+// 			
+// 
+// 
+// 			return true;
+// 			//break;
+// 		case -1:				// wenn daten gelesen und verwertet (sofern nicht neue daten bereits geschrieben) kann ignoriert werden wenn nur lesen wenn fertig gefï¿½llt
+// 
+// 			break;
+// 		default :
+// 			break;
+// 	}
+// }
 
 void vGetData( void *pvParameters ) {
 	
 	vTaskDelay( 10 / portTICK_RATE_MS );
 }
+
+// void dataPointer(int mode, int adressNr, uint16_t **data) {			// write blockierter Bereich, reading erlaubt nicht blockierter bereich, umgekehrt warten, lesen weniger relevant
+// 	static uint16_t data2bB[28][32];
+// 	int adress = adressNr;
+// 	
+// 	//static 
+// 	//uint16_t dataWrite[32] = { 0 };
+// 	//uint16_t data[32] = dataIn[32];
+// 	switch (mode) {
+// 		case 0:				// case init
+// 			adressNr = 0;
+// 			//data = {NULL};
+// 			break;
+// 		case 1:				// write data to adress from vQamDec
+// 			//data2bB = **data;
+// 			for (int a = 0; a >= 31; a++) {
+// 				data2bB[adress][a] = data[adress][a];
+// 			}
+// 			return true;
+// 			//break;
+// 		case 2:				// read data in decoder
+// 		
+// 			return true;
+// 			//break;
+// 		case -1:				// wenn daten gelesen und verwertet (sofern nicht neue daten bereits geschrieben) kann ignoriert werden wenn nur lesen wenn fertig gefï¿½llt
+// 		
+// 			break;
+// 		default :
+// 			break;
+// 	} 
+// }

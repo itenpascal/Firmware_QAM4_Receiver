@@ -40,7 +40,7 @@ void initADC(void) {
 	ADCA.CTRLA = 0x01;
 	ADCA.CTRLB = 0x00;
 	ADCA.REFCTRL = 0x10;													//INTVCC = 2V as Reference
-	ADCA.PRESCALER = 0x03;													//011 = 32 prescaler
+	ADCA.PRESCALER = 0x03;													//011 = 32 prescaler => 1MHz (28.16.5 Atmel-8331-8 ...)
 	ADCA.EVCTRL = 0x39;														//Event Channel 7 triggers Channel 0 Conversion
 	ADCA.CH0.CTRL = 0x01;													//singleended positive input without gain
 	ADCA.CH0.MUXCTRL = 0x55;												//Input = ADC10 on ADCA = Pin PB2 = DAC-Output

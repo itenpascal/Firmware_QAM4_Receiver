@@ -10,6 +10,13 @@
 #define QAMINIT_H_
 
 #define NR_OF_SAMPLES						32UL
+#define NR_OF_ARRAY_1D						28		// 
+#define NR_OF_ARRAY_2D_HALF					16		// 
+#define NR_OF_ARRAY_2D						32		// 
+
+
+
+
 #define GENERATOR_FREQUENCY_INITIAL_VALUE	1000UL * NR_OF_SAMPLES
 #define DECODER_FREQUENCY_INITIAL_VALUE		1000UL * NR_OF_SAMPLES
 

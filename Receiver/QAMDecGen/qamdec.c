@@ -46,43 +46,63 @@ void vQuamDec(void* pvParameters)
 	uint16_t bufferelement[NR_OF_SAMPLES];									// 32 Samples max
 	int block = 0;
 	uint64_t runner = 0;													// runner, just counts up by Nr_of_samples to 2^64
-	uint16_t speicher = 0;											// speicher für peakfinder
-	static uint16_t speicher1[15][32] = {0};	
-	static uint16_t speicher2[15][32] = {0};
+	uint16_t speicher = 0;													// speicher für peakfinder
+		//static uint16_t speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {0};	
+	//static uint16_t speicher1[1][NR_OF_ARRAY_2D] = {0};
+	static uint16_t speicher1[101] = {0};
 	uint16_t adWert = 2200;													// maxwert TBD
-	static int sigCount = 0;
+	static int speicher_1D = 0;
 	
-	//dataPointer(0, sigCount, speicher2[30][32]);
+	//dataPointer(0, speicher_1D, speicher2[30][32]);
 	
 	xEventGroupWaitBits(evDMAState, DMADECREADY, false, true, portMAX_DELAY);
 	for(;;) {
 		while(uxQueueMessagesWaiting(decoderQueue) > 0) {
 			if(xQueueReceive(decoderQueue, &bufferelement[0], portMAX_DELAY) == pdTRUE) {
 				speicher = bufferelement[0];
-				if(speicher >= (adWert/1.8)) {									// Störungen im Idle filtern; bei Idle in ca 1/2 MaxSpannung
+				
+				
+					for (int b = 0; b <= 100 - 1; b++) {
+						//speicher1[speicher_1D][b] = bufferelement[b];
+						speicher1[b] = bufferelement[b%32];
+							//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
+						//dataPointer(0, speicher_1D, speicher1[1][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
+					}
+				
+// 					for (int b = 0; b <= NR_OF_ARRAY_2D - 1; b++) {
+// 						//speicher1[speicher_1D][b] = bufferelement[b];
+// 						speicher1[1][b] = bufferelement[b];
+// 						//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
+// 						dataPointer(0, speicher_1D, speicher1[1][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
+// 					}
+					speicher_1D++;											// Raufzählen für die Anzahl Wellen
+				if(speicher >= 1100/*(adWert/2)*/) {									// Störungen im Idle filtern; bei Idle in ca 1/2 MaxSpannung
 						xEventGroupSetBits(egEventBits, STARTMEAS);				// Erkennung Steigende Flanke
-				}
-				if (xEventGroupGetBits(egEventBits) & STARTMEAS) {
-					for (int b = 0; b <= 31; b++) {
-						if (b <= 15) {
-							speicher2[sigCount][b] = &bufferelement[b];
-						} else {
-							speicher2[sigCount][b] = &bufferelement[b];
-						}
-					}
-					if (sigCount = 15) {
-						dataPointer(0, speicher1[15][32]);				// modus 0 = write data (halbe Daten, erster Block)
-					} else if (sigCount >= 30) {
-						dataPointer(0, speicher2[15][32]);				// modus 0 = write data (halbe Daten, zweiter Block)
-						xEventGroupClearBits(egEventBits, STARTMEAS);	// Rücksetzen ausser Idle bit
-					}
-					sigCount++;											// Raufzählen für die Anzahl Wellen
 				}
 			}
 		}		
-		vTaskDelay( 10 / portTICK_RATE_MS );
+		if (xEventGroupGetBits(egEventBits) & STARTMEAS) {
+// 			for (int b = 0; b <= 31; b++) {
+// 				if (b <= 15) {
+// 					speicher1[speicher_1D][b] = &bufferelement[b];
+// 					} else {
+// 					speicher2[speicher_1D][b] = &bufferelement[b];
+// 				}
+// 			}
+		}
+ 		if (speicher_1D >= NR_OF_ARRAY_1D - 1) {
+// 				dataPointer(0, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
+// 				} else if (speicher_1D >= NR_OF_ARRAY_2D - 1) {
+// 				dataPointer(0, speicher2[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, zweiter Block)
+// 				xEventGroupClearBits(egEventBits, STARTMEAS);	// Rücksetzen ausser Idle bit
+			vTaskDelay(10);
+ 		}
+
+		vTaskDelay( 2 / portTICK_RATE_MS );
 	}
 }
+
+
 
 
 

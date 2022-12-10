@@ -48,8 +48,7 @@ void vQuamDec(void* pvParameters)
 	uint64_t runner = 0;													// runner, just counts up by Nr_of_samples to 2^64
 	uint16_t speicher = 0;													// speicher für peakfinder
 		//static uint16_t speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {0};	
-	//static uint16_t speicher1[1][NR_OF_ARRAY_2D] = {0};
-	static uint16_t speicher1[101] = {0};
+	static uint16_t speicher1[1][NR_OF_ARRAY_2D] = {0};
 	uint16_t adWert = 2200;													// maxwert TBD
 	static int speicher_1D = 0;
 	
@@ -62,13 +61,12 @@ void vQuamDec(void* pvParameters)
 				speicher = bufferelement[0];
 				
 				
-					for (int b = 0; b <= 100 - 1; b++) {
-						//speicher1[speicher_1D][b] = bufferelement[b];
-						speicher1[b] = bufferelement[b%32];
-							//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
-						//dataPointer(0, speicher_1D, speicher1[1][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
+					for (int b = 0; b <= NR_OF_ARRAY_2D - 1; b++) {
+						speicher1[speicher_1D][b] = bufferelement[b];
+							//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)									// why no running? 
+						//dataPointer(0, speicher_1D, speicher1[1][NR_OF_ARRAY_2D]);				// modus 0 = write data																				// why no running? TBD Pascal
 					}
-				
+					//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_2D]);				// modus 0 = write data																						// Why no running? TBD Pascal
 // 					for (int b = 0; b <= NR_OF_ARRAY_2D - 1; b++) {
 // 						//speicher1[speicher_1D][b] = bufferelement[b];
 // 						speicher1[1][b] = bufferelement[b];

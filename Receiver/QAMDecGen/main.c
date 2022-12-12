@@ -34,14 +34,14 @@
 extern void vApplicationIdleHook( void );
 void vLedBlink(void *pvParameters);
 void vGetPeak( void *pvParameters );
-void vGetDifference( void *pvParameters);
+void GetDifference( void *pvParameters);
 void vGetData( void *pvParameters);
 //void dataPointer(int mode, int adressNr, uint16_t data[30][32]);
-uint16_t dataPointer(int mode, int speicher_1D, uint16_t data[32]);
+uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]);
 
 TaskHandle_t handler;
 
-uint16_t array1[28][32] = {NULL};	// zwischenl�sung f�r 28 Waves und je 32Werte f�r weiterbearbeitung; sollte durch den Queue gef�llt werden
+static uint16_t array1[28][32] = {NULL};	// zwischenl�sung f�r 28 Waves und je 32Werte f�r weiterbearbeitung; sollte durch den Queue gef�llt werden
 uint16_t array2[28] = {NULL};		// den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
 	
 // EventGroup for different Reasons
@@ -70,11 +70,11 @@ int main(void)
 	initDecDMA();
 	//dataPointer(0,0);
 	
-	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 2, NULL);		// 2B commented out during real-testing, saving some space and further
-	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 1, NULL);
-	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
-	xTaskCreate(vGetDifference, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);
-	xTaskCreate(vGetData, NULL, configMINIMAL_STACK_SIZE + 250, NULL, 1, NULL);		// https://www.mikrocontroller.net/topic/1198
+	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 2, NULL);		// 2B commented out during real-testing, saving some space and further
+	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
+	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
+	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
+	xTaskCreate(vGetData, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 1, NULL);		// https://www.mikrocontroller.net/topic/1198
 
 
 	vDisplayClear();
@@ -87,28 +87,33 @@ int main(void)
 }
 
 void vGetPeak( void *pvParameters ) {													// Peaks aus dem Array mit allen 22 Wellen lesen und diese in einem Weiteren Array abspeichern
+	static int speicherRead_1D = 0;
+	uint16_t speicher[1][1] = {0};
+	uint16_t speicherPointer[28] = {0};
 	for (;;) {
-		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);		// wait for newdata arriverd
-		//dataPointer(1, speicher_1D, speicher1[1][NR_OF_ARRAY_2D]);					// modus 1 = get Data					// TBD Pascal mit heraufzählen 0-27
+		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);		// wait for newdata arrived
+		//speicherPointer[speicherRead_1D] = *dataPointer(1, speicherRead_1D, speicher[0]);								// 					// TBD Pascal mit heraufzählen 0-27
 		uint16_t actualPeak = 0;														// Zwischenspeicher des h�chsten Werts
-		// Mutex damit diese Daten gesperrt sind w�hrend Bearbeitung
 		
-		for (int a = 0; a <= NR_OF_ARRAY_1D - 1; a++) {													// for 22 waves with data
-			for (int b = 0; b <= NR_OF_ARRAY_2D - 1; b++) {												// for 32 samples per wave
+		for (int a = 0; a < NR_OF_ARRAY_1D; a++) {													// for 22 waves with data
+			for (int b = 0; b < NR_OF_ARRAY_2D; b++) {												// for 32 samples per wave
 				if(array1[a][b] > actualPeak) {											// Finden vom H�chstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
-					actualPeak = array1[a][b];											// �bergabe vom neuen H�chstwert
+					actualPeak = array1[a][b];											// Übergabe vom neuen H�chstwert
 					array2[a] = b;														// Position vom H�chstwert der welle wird gespeichert
 				}
 				actualPeak = 0;															// F�r n�chste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
-			}
-			vTaskDelay(100/ portTICK_RATE_MS );
+			} 
 		}
-		// Mutex Ende
-// vTaskSuspend;																		// Damit keine Resourcen besetzt wenn nicht n�tig
+		speicherRead_1D++;
+		if(speicherRead_1D >=28) {															// Rücksetzen  auf 0 wenn max + 1
+			speicherRead_1D = 0;
+		}
+		vTaskDelay(100/ portTICK_RATE_MS );
 	}
+	// vTaskSuspend;																		// Damit keine Resourcen besetzt wenn nicht n�tig
 }
 
-void vGetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den h�chstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.	
+void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den h�chstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.	
 	uint32_t TimeTable[32] = {3125,6250,9375,12500,15625,18750,21875,25000,			// TimeTable wo die MessPunkte in 10^-8 Sekunden hinterlegt sind.
 							  28125,31250,34375,37500,40625,43750,46875,50000,
 							  53125,56250,59375,62500,65625,68750,71875,75000,
@@ -205,14 +210,12 @@ void vGetDifference( void *pvParameters ) {											// Task bestimmt die Zeit 
 }
 
 
-
-
-uint16_t dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) {
-	static uint16_t speicher[28][32];
-	static int speicherWrite;										// 0 - 27, aktueller Standort im 1D Array
+uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) {
+	static uint16_t speicher[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D];
+	static int speicherWrite;														// 0 - 27, aktueller Standort im 1D Array
 	switch (mode) {
 		case 0:			// write 
-			for(int a = 0; a<=31; a++) {
+			for(int a = 0; a < NR_OF_ARRAY_2D; a++) {
 				speicher[speicher_1D][a] = data[a];
 			}
 			speicherWrite = speicher_1D;
@@ -223,20 +226,19 @@ uint16_t dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) {
 		case 1:			// read
 			if (xEventGroupGetBits(egEventsBits) & newDataBit)  {						// wird von write geschrieben
 				xEventGroupClearBits(egEventsBits, newDataBit);							// Rücksetzen damit Datenabgeholt ersichtlich und nur einmal abholen
-				return speicher;
+				return speicher/*[speicher_1D][0]*/; 
+				//break;
 			} else {
-				break;
+				return -1;
+				//break;
 			}
-			
 		default:
-			break;
+			return -1;
+			//break;
 	}	
 }
 
-
-
-
 void vGetData( void *pvParameters ) {
 	
-	vTaskDelay( 10 / portTICK_RATE_MS );
+	vTaskDelay( 100 / portTICK_RATE_MS );
 }

@@ -48,34 +48,30 @@ void vQuamDec(void* pvParameters)
 	uint64_t runner = 0;													// runner, just counts up by Nr_of_samples to 2^64
 	uint16_t speicher = 0;													// speicher für peakfinder
 		//static uint16_t speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {0};	
-	static uint16_t speicher1[1][NR_OF_ARRAY_2D] = {0};
+	static uint16_t speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {0};
 	uint16_t adWert = 2200;													// maxwert TBD
 	static int speicher_1D = 0;
-	
-	//dataPointer(0, speicher_1D, speicher2[30][32]);
 	
 	xEventGroupWaitBits(evDMAState, DMADECREADY, false, true, portMAX_DELAY);
 	for(;;) {
 		while(uxQueueMessagesWaiting(decoderQueue) > 0) {
 			if(xQueueReceive(decoderQueue, &bufferelement[0], portMAX_DELAY) == pdTRUE) {
 				speicher = bufferelement[0];
-				
-				
-					for (int b = 0; b <= NR_OF_ARRAY_2D - 1; b++) {
-						speicher1[speicher_1D][b] = bufferelement[b];
-							//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)									// why no running? 
-						//dataPointer(0, speicher_1D, speicher1[1][NR_OF_ARRAY_2D]);				// modus 0 = write data																				// why no running? TBD Pascal
+					for (int b = 0; b < NR_OF_ARRAY_2D; b++) {
+	//					speicher1[speicher_1D][b] = bufferelement[b];					// zu gross für speicher??
+							//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)								// why no running? 																		// why no running? TBD Pascal
 					}
-					//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_2D]);				// modus 0 = write data																						// Why no running? TBD Pascal
+					//dataPointer(0, speicher_1D, speicher1);								// modus 0 = write data		
+									//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_2D]);				// modus 0 = write data																	// Why no running? TBD Pascal
 // 					for (int b = 0; b <= NR_OF_ARRAY_2D - 1; b++) {
 // 						//speicher1[speicher_1D][b] = bufferelement[b];
 // 						speicher1[1][b] = bufferelement[b];
 // 						//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
 // 						dataPointer(0, speicher_1D, speicher1[1][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
 // 					}
-					speicher_1D++;											// Raufzählen für die Anzahl Wellen
+					speicher_1D++;													// Raufzählen für die Anzahl Wellen
 				if(speicher >= 1100/*(adWert/2)*/) {									// Störungen im Idle filtern; bei Idle in ca 1/2 MaxSpannung
-						xEventGroupSetBits(egEventBits, STARTMEAS);				// Erkennung Steigende Flanke
+						xEventGroupSetBits(egEventBits, STARTMEAS);					// Erkennung Steigende Flanke
 				}
 			}
 		}		
@@ -88,11 +84,12 @@ void vQuamDec(void* pvParameters)
 // 				}
 // 			}
 		}
- 		if (speicher_1D >= NR_OF_ARRAY_1D - 1) {
+ 		if (speicher_1D > NR_OF_ARRAY_1D-1) {
 // 				dataPointer(0, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
 // 				} else if (speicher_1D >= NR_OF_ARRAY_2D - 1) {
 // 				dataPointer(0, speicher2[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, zweiter Block)
-// 				xEventGroupClearBits(egEventBits, STARTMEAS);	// Rücksetzen ausser Idle bit
+ 				//xEventGroupClearBits(egEventBits, STARTMEAS);				// Rücksetzen ausser Idle bit
+				//speicher_1D = 0;
 			vTaskDelay(10);
  		}
 

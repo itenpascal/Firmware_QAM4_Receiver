@@ -148,19 +148,29 @@ int main(void)
 	return 0;
 }
 
-void vGetPeak( void *pvParameters ) {													// Peaks aus dem Array mit allen 22 Wellen lesen und diese in einem Weiteren Array abspeichern
+void vGetPeak( void *pvParameters ) {
+int c;													// Peaks aus dem Array mit allen 22 Wellen lesen und diese in einem Weiteren Array abspeichern
 	static int speicherRead_1D = 0;
-	uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};
+	uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};										// Zeigt die aktuelle Position wo geschrieben wird
+	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
+	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelsenen wir Wennen Ende
 	for (;;) {
-		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);		// wait for newdata arrived	
+		//xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);		// wait for newdata arrived	(Wird nicht mehr benötigt?
 		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 		
-		for (int a = 0; a < NR_OF_ARRAY_1D; a++) {													// for 22 waves with data
-			for (int b = 0; b < NR_OF_ARRAY_2D; b++) {												// for 32 samples per wave
-// 				if(array[a] > actualPeak) {											// Finden vom H�chstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
-// 					actualPeak = array1[a][b];											// Übergabe vom neuen Höchstwert
-// 					array2[a] = b;														// Position vom H�chstwert der welle wird gespeichert
-// 				}
+		if (speicherPointer - counterWaveLenghtEnd <= 32){
+			counterWaveLenghtEnd = speicherPointer;
+			counterWaveLenghtstart = counterWaveLenghtEnd -32;
+			int c = 0;																	// zähler für den addresspointer im Arry 2
+			for (int a = counterWaveLenghtstart; a < counterWaveLenghtEnd; a++) {		// für 32 Werte pro welle höchstwert ermitteln
+				c++;
+				if(array[a] > actualPeak) {												// Finden vom H�chstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
+					actualPeak = array[a];												// Übergabe vom neuen Höchstwert
+					array2[c] = a%32;													// Position vom H�chstwert der welle wird gespeichert
+				}
+				if (c <= 32) {
+					c = 0;
+				}
 				actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
 			} 
 		}

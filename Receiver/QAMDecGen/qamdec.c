@@ -32,9 +32,9 @@ EventGroupHandle_t egEventBits = NULL;
 #define STARTMEAS		0x02				// Start Measure, idletotpunkt überschritten, start Daten speicherung für 22*32bit
 #define BLOCKED			0x04				// 
 
-extern uint16_t array;
-extern uint16_t array2;
-extern int speicherWrite;
+extern uint16_t array[NR_OF_ARRAY_WHOLE];
+//extern uint16_t array2;
+extern uint16_t speicherWrite;
 
 void vQuamDec(void* pvParameters)
 {
@@ -45,11 +45,11 @@ void vQuamDec(void* pvParameters)
 		vTaskDelay(3/portTICK_RATE_MS);
 	}
 	
-	uint16_t bufferelement[NR_OF_SAMPLES];									// 32 Samples max
+	uint16_t bufferelement[NR_OF_SAMPLES];														// 32 Samples max
 	int block = 0;
-	uint64_t runner = 0;													// runner, just counts up by Nr_of_samples to 2^64
-	uint16_t speicher[4] = {0};													// speicher für peakfinder	
-	uint16_t adWert = 2200;													// maxwert TBD
+	uint64_t runner = 0;																		// runner, just counts up by Nr_of_samples to 2^64
+	uint16_t speicher[4] = {0};																	// speicher für peakfinder	
+	uint16_t adWert = 2200;																		// maxwert TBD
 	static int speicher_1D = 0;
 	int a = 0;
 	
@@ -61,26 +61,20 @@ void vQuamDec(void* pvParameters)
 				speicher[1] = speicher[0];
 				speicher[2] = speicher[1];
 				speicher[3] = speicher[2];
-				if (speicher[0] > (adWert/1.9)) {					// ausserhalb idle Bereich
-					if (speicher[0] > speicher[3]) {				// Steigende Flanke erkannt
-						xEventGroupSetBits(egEventBits,RISEEDGE);	// Anfagne Werte zu speichern für 28*32Werte
+				if (speicher[0] > (adWert/1.9)) {												// ausserhalb idle Bereich
+					if (speicher[0] > speicher[3]) {											// Steigende Flanke erkannt
+						xEventGroupSetBits(egEventBits,RISEEDGE);								// Anfangen Werte zu speichern für 28*32Werte
 					}
 				}
-				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {
-					for (a = 0; a % NR_OF_ARRAY_WHOLE; a++) {
-						//array[a] = bufferelement[a];																// why no running? TBD Pascal
-					}		
-		//			speicherWrite = &array[a];							// abgeschlossener Schreibzyklus speicher für readTask
-					xEventGroupClearBits(egEventBits,RISEEDGE);		// wenn durchgelaufen, wider Rücksetzten für nächste Starterkennung
-					speicher_1D++;													// Raufzählen für die Anzahl Wellen
+				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// Freigabe wenn oben erfüllt
+					for (a = 0; a <= 4*NR_OF_ARRAY_WHOLE; a++) {								// 28*32 = 896, mit 1'000 genug Spiel wenn langsamer und Readfunktion mit >32 auch
+						array[a % NR_OF_ARRAY_WHOLE] = bufferelement[a % NR_OF_ARRAY_2D];		// speichern aktueller Wert
+						speicherWrite = a;														// abgeschlossener Schreibzyklus speicher für readTask
+					}	
+					xEventGroupClearBits(egEventBits,RISEEDGE);									// wenn durchgelaufen, wieder Rücksetzten für nächste Starterkennung
 				}
 			}
 		}		
-		if (xEventGroupGetBits(egEventBits) & STARTMEAS) {
-// 			for (int b = 0; b <= 31; b++) {
-//				
-// 			}
-		}
 		vTaskDelay( 2 / portTICK_RATE_MS );
 	}
 }

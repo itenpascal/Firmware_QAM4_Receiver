@@ -28,9 +28,9 @@ QueueHandle_t decoderQueue;
 
 // EventGroup for different Reasons
 EventGroupHandle_t egEventBits = NULL;
-#define RISEEDGE		0x01				// steigende Flanke erkannt
-#define STARTMEAS		0x02				// Start Measure, idletotpunkt überschritten, start Daten speicherung für 22*32bit
-#define BLOCKED			0x04				// 
+#define RISEEDGE		0x01						// steigende Flanke erkannt
+#define STARTMEAS		0x02						// Start Measure, idletotpunkt überschritten, start Daten speicherung für 22*32bit
+#define BLOCKED			0x04						// 
 
 extern uint16_t array[NR_OF_ARRAY_WHOLE];
 //extern uint16_t array2;

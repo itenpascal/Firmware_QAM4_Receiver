@@ -7,8 +7,6 @@
 
 #define NR_OF_ARRAY_WHOLE					256		// 
 
-
-
 #ifndef QAMDEC_H_
 #define QAMDEC_H_
 

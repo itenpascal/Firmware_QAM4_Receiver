@@ -2,7 +2,7 @@
  * QAMDecGen.c
  *
  * Created: 20.03.2018 18:32:07
- * Author : Martin Burger
+ * Author : Martin Burger, Philipp, Pascal
  */ 
 
 //#include <avr/io.h>
@@ -30,72 +30,12 @@
 #include "qaminit.h"
 #include "qamgen.h"
 #include "qamdec.h"
-
-#define LOCK_WRITER 1
-
-typedef struct RWLockManagement {
-	SemaphoreHandle_t groupSeparator;
-	signed long currentReaderCounter;
-	volatile unsigned long readerSpinLock;	
-}RWLockManagement_t;
-	
-	unsigned long CreateRWLock(RWLockManagement_t *Lock) {
-		unsigned long a_Result = 0;
-		Lock->groupSeparator = xSemaphoreCreateBinary();
-		if (Lock->groupSeparator) {
-			Lock->currentReaderCounter = 0;
-			Lock->readerSpinLock = 0;
-			if (xSemaphoreGive(Lock->groupSeparator) == pdTRUE) {
-				a_Result = 1;
-			}
-		}
-	}
-	
-	unsigned short incrementReader(RWLockManagement_t * Lock) {
-		if(Lock->currentReaderCounter++ == 0) {
-			return 1;
-		}
-		return 0;
-	}
-
-	unsigned short decrementReader(RWLockManagement_t * Lock) {
-		if(--Lock->currentReaderCounter == 0) {
-			return 1;
-		}
-		return 0;
-	}
-
-	void claimRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
-		if(Mode == LOCK_WRITER) {
-			xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
-			} else {
-			if(incrementReader(Lock)) {
-				xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
-				Lock->readerSpinLock = 1;
-			}
-			while(!Lock->readerSpinLock) {
-				vTaskDelay(2);
-			}
-		}
-		
-	}
-	
-		void releaseRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
-			if(Mode == LOCK_WRITER) {
-				xSemaphoreGive(Lock->groupSeparator);
-				} else {
-				if(decrementReader(Lock)) {
-					Lock->readerSpinLock = 0;
-					xSemaphoreGive(Lock->groupSeparator);
-				}
-			}
-		}
 		
 extern void vApplicationIdleHook( void );
 void vLedBlink(void *pvParameters);
 void vGetPeak( void *pvParameters );
 void GetDifference( void *pvParameters);
-void vGetData( void *pvParameters);
+void vCalcDisplay( void *pvParameters);
 uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]);
 
 TaskHandle_t handler;
@@ -130,11 +70,11 @@ int main(void)
 	initDecDMA();
 	//dataPointer(0,0);
 	
-	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 2, NULL);		// 2B commented out during real-testing, saving some space and further
-	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
+	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 2, NULL);		// 2B commented out during real-testing, saving some space and further
+	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 2, NULL);
 	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
 	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
-	xTaskCreate(vGetData, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 1, NULL);		// https://www.mikrocontroller.net/topic/1198
+	xTaskCreate(vCalcDisplay, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 1, NULL);		// https://www.mikrocontroller.net/topic/1198
 
 
 	vDisplayClear();
@@ -276,14 +216,19 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht n�tig
 	}
 }
-
-
-				
-void vGetData( void *pvParameters ) {
-	
-	vTaskDelay( 100 / portTICK_RATE_MS );
+					
+void vCalcDisplay( void *pvParameters ) {			// von Binär zu Temp rechnen
+	int test = 0;
+	for(;;) {
+		vDisplayClear();
+		vDisplayWriteStringAtPos(0,0,"QAM - Projekt");
+		vDisplayWriteStringAtPos(1,0,"TSE 2009");
+		vDisplayWriteStringAtPos(2,0,"");
+		vDisplayWriteStringAtPos(3,0,"Temperatur: %d°C:", test);
+		test++;
+		vTaskDelay( 500 / portTICK_RATE_MS );
+	}
 }
-
 
 /*
 uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) {
@@ -314,3 +259,63 @@ uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) 
 	}	
 }
 */
+/*
+#define LOCK_WRITER 1
+
+typedef struct RWLockManagement {
+	SemaphoreHandle_t groupSeparator;
+	signed long currentReaderCounter;
+	volatile unsigned long readerSpinLock;
+}RWLockManagement_t;
+
+unsigned long CreateRWLock(RWLockManagement_t *Lock) {
+	unsigned long a_Result = 0;
+	Lock->groupSeparator = xSemaphoreCreateBinary();
+	if (Lock->groupSeparator) {
+		Lock->currentReaderCounter = 0;
+		Lock->readerSpinLock = 0;
+		if (xSemaphoreGive(Lock->groupSeparator) == pdTRUE) {
+			a_Result = 1;
+		}
+	}
+}
+
+unsigned short incrementReader(RWLockManagement_t * Lock) {
+	if(Lock->currentReaderCounter++ == 0) {
+		return 1;
+	}
+	return 0;
+}
+
+unsigned short decrementReader(RWLockManagement_t * Lock) {
+	if(--Lock->currentReaderCounter == 0) {
+		return 1;
+	}
+	return 0;
+}
+
+void claimRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
+	if(Mode == LOCK_WRITER) {
+		xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
+		} else {
+		if(incrementReader(Lock)) {
+			xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
+			Lock->readerSpinLock = 1;
+		}
+		while(!Lock->readerSpinLock) {
+			vTaskDelay(2);
+		}
+	}
+	
+}
+
+void releaseRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
+	if(Mode == LOCK_WRITER) {
+		xSemaphoreGive(Lock->groupSeparator);
+		} else {
+		if(decrementReader(Lock)) {
+			Lock->readerSpinLock = 0;
+			xSemaphoreGive(Lock->groupSeparator);
+		}
+	}
+}*/

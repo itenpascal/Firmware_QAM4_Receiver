@@ -18,6 +18,7 @@
 #include "queue.h"
 #include "event_groups.h"
 #include "stack_macros.h"
+#include "semphr.h"
 
 #include "mem_check.h"
 
@@ -29,6 +30,8 @@
 #include "qaminit.h"
 #include "qamgen.h"
 #include "qamdec.h"
+
+#define LOCK_WRITER 1
 
 typedef struct RWLockManagement {
 	SemaphoreHandle_t groupSeparator;
@@ -48,32 +51,7 @@ typedef struct RWLockManagement {
 		}
 	}
 	
-	void claimRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
-		if(Mode == LOCK_WRITER) {
-			xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
-			} else {
-			if(incrementReader(Lock)) {
-				xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
-				Lock->readerSpinLock = 1;
-			}
-			while(!Lock->readerSpinLock) {
-				vTaskDelay(2);
-			}
-		}
-		
-	}
 
-	void releaseRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
-		if(Mode == LOCK_WRITER) {
-			xSemaphoreGive(Lock->groupSeparator);
-			} else {
-			if(decrementReader(Lock)) {
-				Lock->readerSpinLock = 0;
-				xSemaphoreGive(Lock->groupSeparator);
-			}
-		}
-	}
-	
 	unsigned short incrementReader(RWLockManagement_t * Lock) {
 		if(Lock->currentReaderCounter++ == 0) {
 			return 1;
@@ -88,6 +66,33 @@ typedef struct RWLockManagement {
 		return 0;
 	}
 
+
+	void claimRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
+		if(Mode == LOCK_WRITER) {
+			xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
+			} else {
+			if(incrementReader(Lock)) {
+				xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
+				Lock->readerSpinLock = 1;
+			}
+			while(!Lock->readerSpinLock) {
+				vTaskDelay(2);
+			}
+		}
+		
+	}
+	
+		void releaseRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
+			if(Mode == LOCK_WRITER) {
+				xSemaphoreGive(Lock->groupSeparator);
+				} else {
+				if(decrementReader(Lock)) {
+					Lock->readerSpinLock = 0;
+					xSemaphoreGive(Lock->groupSeparator);
+				}
+			}
+		}
+		
 extern void vApplicationIdleHook( void );
 void vLedBlink(void *pvParameters);
 void vGetPeak( void *pvParameters );
@@ -97,15 +102,15 @@ uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]);
 
 TaskHandle_t handler;
 
-static uint16_t array1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {NULL};	// zwischenl�sung f�r 28 Waves und je 32Werte f�r weiterbearbeitung; sollte durch den Queue gef�llt werden
+static uint16_t array[NR_OF_ARRAY_WHOLE] = {NULL};	// zwischenl�sung f�r 28 Waves und je 32Werte f�r weiterbearbeitung; sollte durch den Queue gef�llt werden
 static uint16_t array2[NR_OF_ARRAY_1D] = {NULL};					// den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
-static int speicherWrite = 0;
+static uint16_t speicherWrite = 0;
 	
 // EventGroup for different Reasons
 EventGroupHandle_t egEventsBits = NULL;
 #define newDataBit		0x01				// steigende Flanke erkannt
 //#define STARTMEAS		0x02				// Start Measure, idletotpunkt überschritten, start Daten speicherung für 22*32bit
-//#define BLOCKED			0x04				// 
+//#define BLOCKED		0x04				// 
 
 void vApplicationIdleHook( void )
 {	
@@ -152,10 +157,10 @@ void vGetPeak( void *pvParameters ) {													// Peaks aus dem Array mit all
 		
 		for (int a = 0; a < NR_OF_ARRAY_1D; a++) {													// for 22 waves with data
 			for (int b = 0; b < NR_OF_ARRAY_2D; b++) {												// for 32 samples per wave
-				if(array1[a][b] > actualPeak) {											// Finden vom H�chstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
-					actualPeak = array1[a][b];											// Übergabe vom neuen Höchstwert
-					array2[a] = b;														// Position vom H�chstwert der welle wird gespeichert
-				}
+// 				if(array[a] > actualPeak) {											// Finden vom H�chstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
+// 					actualPeak = array1[a][b];											// Übergabe vom neuen Höchstwert
+// 					array2[a] = b;														// Position vom H�chstwert der welle wird gespeichert
+// 				}
 				actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
 			} 
 		}
@@ -264,6 +269,14 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	}
 }
 
+
+				
+void vGetData( void *pvParameters ) {
+	
+	vTaskDelay( 100 / portTICK_RATE_MS );
+}
+
+
 /*
 uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) {
 	static uint16_t speicher[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D];
@@ -293,13 +306,3 @@ uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) 
 	}	
 }
 */
-				
-void vGetData( void *pvParameters ) {
-	
-	vTaskDelay( 100 / portTICK_RATE_MS );
-}
-
-
-
-
-

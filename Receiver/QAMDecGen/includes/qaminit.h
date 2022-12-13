@@ -13,6 +13,7 @@
 #define NR_OF_ARRAY_1D						28		// 
 #define NR_OF_ARRAY_2D_HALF					16		// 
 #define NR_OF_ARRAY_2D						32		// 
+#define NR_OF_ARRAY_WHOLE					200		// 
 
 
 

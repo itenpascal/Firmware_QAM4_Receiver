@@ -32,7 +32,7 @@ EventGroupHandle_t egEventBits = NULL;
 #define STARTMEAS		0x02				// Start Measure, idletotpunkt überschritten, start Daten speicherung für 22*32bit
 #define BLOCKED			0x04				// 
 
-extern uint16_t array1;
+extern uint16_t array;
 extern uint16_t array2;
 extern int speicherWrite;
 
@@ -49,9 +49,9 @@ void vQuamDec(void* pvParameters)
 	int block = 0;
 	uint64_t runner = 0;													// runner, just counts up by Nr_of_samples to 2^64
 	uint16_t speicher[4] = {0};													// speicher für peakfinder	
-	static uint16_t speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {0};
 	uint16_t adWert = 2200;													// maxwert TBD
 	static int speicher_1D = 0;
+	int a = 0;
 	
 	xEventGroupWaitBits(evDMAState, DMADECREADY, false, true, portMAX_DELAY);
 	for(;;) {
@@ -61,18 +61,16 @@ void vQuamDec(void* pvParameters)
 				speicher[1] = speicher[0];
 				speicher[2] = speicher[1];
 				speicher[3] = speicher[2];
-				if (speicher[0] >= 1100(adWert/1.9)) {					// ausserhalb idle Bereich
+				if (speicher[0] > (adWert/1.9)) {					// ausserhalb idle Bereich
 					if (speicher[0] > speicher[3]) {				// Steigende Flanke erkannt
 						xEventGroupSetBits(egEventBits,RISEEDGE);	// Anfagne Werte zu speichern für 28*32Werte
 					}
 				}
 				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {
-					for (int a = 0; a < NR_OF_ARRAY_1D; a++ ) {
-						for (int b = 0; b < NR_OF_ARRAY_2D; b++) {
-							array1[a][b] = bufferelement[b];																// why no running? TBD Pascal
-						}		
-						speicherWrite = a;							// abgeschlossener Schreibzyklus speicher für readTask
-					}
+					for (a = 0; a % NR_OF_ARRAY_WHOLE; a++) {
+						//array[a] = bufferelement[a];																// why no running? TBD Pascal
+					}		
+		//			speicherWrite = &array[a];							// abgeschlossener Schreibzyklus speicher für readTask
 					xEventGroupClearBits(egEventBits,RISEEDGE);		// wenn durchgelaufen, wider Rücksetzten für nächste Starterkennung
 					speicher_1D++;													// Raufzählen für die Anzahl Wellen
 				}

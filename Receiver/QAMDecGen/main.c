@@ -30,19 +30,76 @@
 #include "qamgen.h"
 #include "qamdec.h"
 
+typedef struct RWLockManagement {
+	SemaphoreHandle_t groupSeparator;
+	signed long currentReaderCounter;
+	volatile unsigned long readerSpinLock;	
+}RWLockManagement_t;
+	
+	unsigned long CreateRWLock(RWLockManagement_t *Lock) {
+		unsigned long a_Result = 0;
+		Lock->groupSeparator = xSemaphoreCreateBinary();
+		if (Lock->groupSeparator) {
+			Lock->currentReaderCounter = 0;
+			Lock->readerSpinLock = 0;
+			if (xSemaphoreGive(Lock->groupSeparator) == pdTRUE) {
+				a_Result = 1;
+			}
+		}
+	}
+	
+	void claimRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
+		if(Mode == LOCK_WRITER) {
+			xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
+			} else {
+			if(incrementReader(Lock)) {
+				xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
+				Lock->readerSpinLock = 1;
+			}
+			while(!Lock->readerSpinLock) {
+				vTaskDelay(2);
+			}
+		}
+		
+	}
+
+	void releaseRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
+		if(Mode == LOCK_WRITER) {
+			xSemaphoreGive(Lock->groupSeparator);
+			} else {
+			if(decrementReader(Lock)) {
+				Lock->readerSpinLock = 0;
+				xSemaphoreGive(Lock->groupSeparator);
+			}
+		}
+	}
+	
+	unsigned short incrementReader(RWLockManagement_t * Lock) {
+		if(Lock->currentReaderCounter++ == 0) {
+			return 1;
+		}
+		return 0;
+	}
+
+	unsigned short decrementReader(RWLockManagement_t * Lock) {
+		if(--Lock->currentReaderCounter == 0) {
+			return 1;
+		}
+		return 0;
+	}
 
 extern void vApplicationIdleHook( void );
 void vLedBlink(void *pvParameters);
 void vGetPeak( void *pvParameters );
 void GetDifference( void *pvParameters);
 void vGetData( void *pvParameters);
-//void dataPointer(int mode, int adressNr, uint16_t data[30][32]);
 uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]);
 
 TaskHandle_t handler;
 
-static uint16_t array1[28][32] = {NULL};	// zwischenl�sung f�r 28 Waves und je 32Werte f�r weiterbearbeitung; sollte durch den Queue gef�llt werden
-uint16_t array2[28] = {NULL};		// den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
+static uint16_t array1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {NULL};	// zwischenl�sung f�r 28 Waves und je 32Werte f�r weiterbearbeitung; sollte durch den Queue gef�llt werden
+static uint16_t array2[NR_OF_ARRAY_1D] = {NULL};					// den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
+static int speicherWrite = 0;
 	
 // EventGroup for different Reasons
 EventGroupHandle_t egEventsBits = NULL;
@@ -88,20 +145,18 @@ int main(void)
 
 void vGetPeak( void *pvParameters ) {													// Peaks aus dem Array mit allen 22 Wellen lesen und diese in einem Weiteren Array abspeichern
 	static int speicherRead_1D = 0;
-	uint16_t speicher[1][1] = {0};
-	uint16_t speicherPointer[28] = {0};
+	uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};
 	for (;;) {
-		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);		// wait for newdata arrived
-		//speicherPointer[speicherRead_1D] = *dataPointer(1, speicherRead_1D, speicher[0]);								// 					// TBD Pascal mit heraufzählen 0-27
-		uint16_t actualPeak = 0;														// Zwischenspeicher des h�chsten Werts
+		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);		// wait for newdata arrived	
+		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 		
 		for (int a = 0; a < NR_OF_ARRAY_1D; a++) {													// for 22 waves with data
 			for (int b = 0; b < NR_OF_ARRAY_2D; b++) {												// for 32 samples per wave
 				if(array1[a][b] > actualPeak) {											// Finden vom H�chstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
-					actualPeak = array1[a][b];											// Übergabe vom neuen H�chstwert
+					actualPeak = array1[a][b];											// Übergabe vom neuen Höchstwert
 					array2[a] = b;														// Position vom H�chstwert der welle wird gespeichert
 				}
-				actualPeak = 0;															// F�r n�chste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
+				actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
 			} 
 		}
 		speicherRead_1D++;
@@ -209,10 +264,10 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	}
 }
 
-
+/*
 uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) {
 	static uint16_t speicher[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D];
-	static int speicherWrite;														// 0 - 27, aktueller Standort im 1D Array
+	static int speicherWrite;															// 0 - 27, aktueller Standort im 1D Array
 	switch (mode) {
 		case 0:			// write 
 			for(int a = 0; a < NR_OF_ARRAY_2D; a++) {
@@ -226,7 +281,7 @@ uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) 
 		case 1:			// read
 			if (xEventGroupGetBits(egEventsBits) & newDataBit)  {						// wird von write geschrieben
 				xEventGroupClearBits(egEventsBits, newDataBit);							// Rücksetzen damit Datenabgeholt ersichtlich und nur einmal abholen
-				return speicher/*[speicher_1D][0]*/; 
+				return speicher; 
 				//break;
 			} else {
 				return -1;
@@ -237,8 +292,14 @@ uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) 
 			//break;
 	}	
 }
-
+*/
+				
 void vGetData( void *pvParameters ) {
 	
 	vTaskDelay( 100 / portTICK_RATE_MS );
 }
+
+
+
+
+

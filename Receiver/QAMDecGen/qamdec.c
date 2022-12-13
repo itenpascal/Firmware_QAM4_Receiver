@@ -4,7 +4,6 @@
 * Created: 05.05.2020 16:38:25
 *  Author: Chaos Pascal Philipp
 */ 
-
 #include "avr_compiler.h"
 #include "pmic_driver.h"
 #include "TC_driver.h"
@@ -33,10 +32,13 @@ EventGroupHandle_t egEventBits = NULL;
 #define STARTMEAS		0x02				// Start Measure, idletotpunkt überschritten, start Daten speicherung für 22*32bit
 #define BLOCKED			0x04				// 
 
+extern uint16_t array1;
+extern uint16_t array2;
+extern int speicherWrite;
+
 void vQuamDec(void* pvParameters)
 {
 	( void ) pvParameters;
-	
 	decoderQueue = xQueueCreate( 4, NR_OF_SAMPLES * sizeof(int16_t) );
 	
 	while(evDMAState == NULL) {
@@ -46,8 +48,7 @@ void vQuamDec(void* pvParameters)
 	uint16_t bufferelement[NR_OF_SAMPLES];									// 32 Samples max
 	int block = 0;
 	uint64_t runner = 0;													// runner, just counts up by Nr_of_samples to 2^64
-	uint16_t speicher = 0;													// speicher für peakfinder
-		//static uint16_t speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {0};	
+	uint16_t speicher[4] = {0};													// speicher für peakfinder	
 	static uint16_t speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D] = {0};
 	uint16_t adWert = 2200;													// maxwert TBD
 	static int speicher_1D = 0;
@@ -56,49 +57,35 @@ void vQuamDec(void* pvParameters)
 	for(;;) {
 		while(uxQueueMessagesWaiting(decoderQueue) > 0) {
 			if(xQueueReceive(decoderQueue, &bufferelement[0], portMAX_DELAY) == pdTRUE) {
-				speicher = bufferelement[0];
-					for (int b = 0; b < NR_OF_ARRAY_2D; b++) {
-	//					speicher1[speicher_1D][b] = bufferelement[b];					// zu gross für speicher??
-							//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)								// why no running? 																		// why no running? TBD Pascal
+				speicher[0] = bufferelement[0];
+				speicher[1] = speicher[0];
+				speicher[2] = speicher[1];
+				speicher[3] = speicher[2];
+				if (speicher[0] >= 1100(adWert/1.9)) {					// ausserhalb idle Bereich
+					if (speicher[0] > speicher[3]) {				// Steigende Flanke erkannt
+						xEventGroupSetBits(egEventBits,RISEEDGE);	// Anfagne Werte zu speichern für 28*32Werte
 					}
-					//dataPointer(0, speicher_1D, speicher1);								// modus 0 = write data		
-									//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_2D]);				// modus 0 = write data																	// Why no running? TBD Pascal
-// 					for (int b = 0; b <= NR_OF_ARRAY_2D - 1; b++) {
-// 						//speicher1[speicher_1D][b] = bufferelement[b];
-// 						speicher1[1][b] = bufferelement[b];
-// 						//dataPointer(0, speicher_1D, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
-// 						dataPointer(0, speicher_1D, speicher1[1][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
-// 					}
+				}
+				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {
+					for (int a = 0; a < NR_OF_ARRAY_1D; a++ ) {
+						for (int b = 0; b < NR_OF_ARRAY_2D; b++) {
+							array1[a][b] = bufferelement[b];																// why no running? TBD Pascal
+						}		
+						speicherWrite = a;							// abgeschlossener Schreibzyklus speicher für readTask
+					}
+					xEventGroupClearBits(egEventBits,RISEEDGE);		// wenn durchgelaufen, wider Rücksetzten für nächste Starterkennung
 					speicher_1D++;													// Raufzählen für die Anzahl Wellen
-				if(speicher >= 1100/*(adWert/2)*/) {									// Störungen im Idle filtern; bei Idle in ca 1/2 MaxSpannung
-						xEventGroupSetBits(egEventBits, STARTMEAS);					// Erkennung Steigende Flanke
 				}
 			}
 		}		
 		if (xEventGroupGetBits(egEventBits) & STARTMEAS) {
 // 			for (int b = 0; b <= 31; b++) {
-// 				if (b <= 15) {
-// 					speicher1[speicher_1D][b] = &bufferelement[b];
-// 					} else {
-// 					speicher2[speicher_1D][b] = &bufferelement[b];
-// 				}
+//				
 // 			}
 		}
- 		if (speicher_1D > NR_OF_ARRAY_1D-1) {
-// 				dataPointer(0, speicher1[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, erster Block)
-// 				} else if (speicher_1D >= NR_OF_ARRAY_2D - 1) {
-// 				dataPointer(0, speicher2[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D]);				// modus 0 = write data (halbe Daten, zweiter Block)
- 				//xEventGroupClearBits(egEventBits, STARTMEAS);				// Rücksetzen ausser Idle bit
-				//speicher_1D = 0;
-			vTaskDelay(10);
- 		}
-
 		vTaskDelay( 2 / portTICK_RATE_MS );
 	}
 }
-
-
-
 
 
 void fillDecoderQueue(uint16_t buffer[NR_OF_SAMPLES])

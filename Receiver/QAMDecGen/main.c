@@ -40,8 +40,8 @@ uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]);
 
 TaskHandle_t handler;
 
-uint16_t array[NR_OF_ARRAY_WHOLE] = {NULL};			// 256 Speicherplätze; darf nicht static sein (?) Fehlereldung; in qamdec.h & qam.dec.c als extern
-static uint16_t array2[NR_OF_ARRAY_1D] = {NULL};	//den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
+uint16_t array[NR_OF_ARRAY_WHOLE] = {0};			// 256 Speicherplätze; darf nicht static sein (?) Fehlereldung; in qamdec.h & qam.dec.c als extern
+static uint16_t array2[NR_OF_ARRAY_1D] = {0};		// den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
 uint16_t speicherWrite = 0;
 	
 // EventGroup for different Reasons
@@ -78,35 +78,35 @@ int main(void)
 
 
 	vDisplayClear();
-	vDisplayWriteStringAtPos(0,0,"FreeRTOS 10.0.1");
-	vDisplayWriteStringAtPos(1,0,"EDUBoard 1.0");
-	vDisplayWriteStringAtPos(2,0,"QAMDECGEN-Base");
-	vDisplayWriteStringAtPos(3,0,"ResetReason: %d", reason);
+	//vDisplayWriteStringAtPos(0,0,"FreeRTOS 10.0.1");
+	//vDisplayWriteStringAtPos(1,0,"EDUBoard 1.0");
+	//vDisplayWriteStringAtPos(2,0,"QAMDECGEN-Base");
+	//vDisplayWriteStringAtPos(3,0,"ResetReason: %d", reason);
 	vTaskStartScheduler();
 	return 0;
 }
 
 void vGetPeak( void *pvParameters ) {
-int c;													// Peaks aus dem Array mit allen 22 Wellen lesen und diese in einem Weiteren Array abspeichern
+int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in einem Weiteren Array abspeichern
 	static int speicherRead_1D = 0;
 	uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};										// Zeigt die aktuelle Position wo geschrieben wird
 	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
-	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelsenen wir Wennen Ende
+	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelesen wird wenn Ende
 	for (;;) {
-		//xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);		// wait for newdata arrived	(Wird nicht mehr benötigt?
+		//xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?
 		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 		
 		if (speicherPointer - counterWaveLenghtEnd <= 32){
 			counterWaveLenghtEnd = speicherPointer;
 			counterWaveLenghtstart = counterWaveLenghtEnd -32;
-			int c = 0;																	// zähler für den addresspointer im Arry 2
+			int c = 0;																	// zähler für den addresspointer im Array 2
 			for (int a = counterWaveLenghtstart; a < counterWaveLenghtEnd; a++) {		// für 32 Werte pro welle höchstwert ermitteln
 				c++;
 				if(array[a] > actualPeak) {												// Finden vom H�chstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
 					actualPeak = array[a];												// Übergabe vom neuen Höchstwert
 					array2[c] = a%32;													// Position vom H�chstwert der welle wird gespeichert
 				}
-				if (c <= 32) {
+				if (c >= 32) {
 					c = 0;
 				}
 				actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
@@ -132,16 +132,13 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	uint8_t  WellenWert[28] = {NULL};												// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
 	
 	for(;;) {
-		
-
-		
 		for(int i = 0; i <= 27; i ++){
 			HoechstwertPos1 = TimeTable[array2[i]];
 			HoechstwertPos2 = TimeTable[array2[i++]];
 			DifferenzPos = HoechstwertPos2-HoechstwertPos1;
 			if(i<=3){
 				if(DifferenzPos == 100000){											// Toleranzbereich? aktuell nur perfekte Werte möglich:
-					WellenWert[i++] = 0;											// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 durchgang ausgegangen
+					WellenWert[i++] = 0;											// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
 				}
 				if(DifferenzPos == 175000){	
 					WellenWert[i++] = 2;
@@ -224,7 +221,7 @@ void vCalcDisplay( void *pvParameters ) {			// von Binär zu Temp rechnen
 		vDisplayWriteStringAtPos(0,0,"QAM - Projekt");
 		vDisplayWriteStringAtPos(1,0,"TSE 2009");
 		vDisplayWriteStringAtPos(2,0,"");
-		vDisplayWriteStringAtPos(3,0,"Temperatur: %d°C:", test);
+		vDisplayWriteStringAtPos(3,0,"Temperatur: %d G C", test);
 		test++;
 		vTaskDelay( 500 / portTICK_RATE_MS );
 	}

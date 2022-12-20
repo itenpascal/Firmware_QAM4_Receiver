@@ -67,7 +67,7 @@ void vQuamDec(void* pvParameters)
 					}
 				}
 				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// Freigabe wenn oben erfüllt
-					for (a = 0; a <= 4*NR_OF_ARRAY_WHOLE; a++) {								// 28*32 = 896, mit 1'000 genug Spiel wenn langsamer und Readfunktion mit >32 auch
+					for (a = 0; a <= 4*NR_OF_ARRAY_WHOLE; a++) {								// 28*32 = 896, mit 1'000+ genug Spiel wenn langsamer und Readfunktion mit >32 auch
 						array[a % NR_OF_ARRAY_WHOLE] = bufferelement[a % NR_OF_ARRAY_2D];		// speichern aktueller Wert
 						speicherWrite = a;														// abgeschlossener Schreibzyklus speicher für readTask
 					}	
@@ -78,7 +78,6 @@ void vQuamDec(void* pvParameters)
 		vTaskDelay( 2 / portTICK_RATE_MS );
 	}
 }
-
 
 void fillDecoderQueue(uint16_t buffer[NR_OF_SAMPLES])
 {

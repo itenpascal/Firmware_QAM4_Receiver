@@ -35,10 +35,13 @@ extern void vApplicationIdleHook( void );
 void vLedBlink(void *pvParameters);
 void vGetPeak( void *pvParameters );
 void GetDifference( void *pvParameters);
-void vCalcDisplay( void *pvParameters);
+void vCalcData( void *pvParameters);
+void vDisplay( void *pvParameters);
 uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]);
+float dataTemp (int mode, float temp);
 
 TaskHandle_t handler;
+TaskHandle_t calculator;
 
 uint16_t array[NR_OF_ARRAY_WHOLE] = {0};			// 256 Speicherplätze; darf nicht static sein (?) Fehlereldung; in qamdec.h & qam.dec.c als extern
 static uint16_t array2[NR_OF_ARRAY_1D] = {0};		// den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
@@ -47,7 +50,7 @@ uint16_t speicherWrite = 0;
 // EventGroup for different Reasons
 EventGroupHandle_t egEventsBits = NULL;
 #define newDataBit		0x01				// steigende Flanke erkannt
-//#define STARTMEAS		0x02				// Start Measure, idletotpunkt überschritten, start Daten speicherung für 22*32bit
+#define dataBlockReady	0x02				// Wenn alle 28 Plätze gefüllt sind Daten abholen zur Verarbeitung
 //#define BLOCKED		0x04				// 
 
 void vApplicationIdleHook( void )
@@ -70,11 +73,12 @@ int main(void)
 	initDecDMA();
 	//dataPointer(0,0);
 	
-	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 2, NULL);		// 2B commented out during real-testing, saving some space and further
-	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 2, NULL);
+	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 3, NULL);		// 2B commented out during real-testing, saving some space and further
+	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 3, NULL);
 	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
 	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
-	xTaskCreate(vCalcDisplay, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 1, NULL);		// https://www.mikrocontroller.net/topic/1198
+	xTaskCreate(vCalcData, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 1, calculator);
+	xTaskCreate(vDisplay, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 2, NULL);		// https://www.mikrocontroller.net/topic/1198
 
 
 	vDisplayClear();
@@ -93,7 +97,7 @@ int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in
 	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
 	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelesen wird wenn Ende
 	for (;;) {
-		//xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?
+		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?
 		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 		
 		if (speicherPointer - counterWaveLenghtEnd <= 32){
@@ -115,11 +119,14 @@ int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in
 		speicherRead_1D++;
 		if(speicherRead_1D >=28) {															// Rücksetzen  auf 0 wenn max + 1
 			speicherRead_1D = 0;
+			xEventGroupSetBits(egEventsBits,dataBlockReady);
 		}
 		vTaskDelay(100/ portTICK_RATE_MS );
 	}
 	// vTaskSuspend;																		// Damit keine Resourcen besetzt wenn nicht n�tig
 }
+
+
 
 void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den h�chstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.	
 	uint32_t TimeTable[32] = {3125,6250,9375,12500,15625,18750,21875,25000,			// TimeTable wo die MessPunkte in 10^-8 Sekunden hinterlegt sind.
@@ -213,15 +220,63 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht n�tig
 	}
 }
-					
-void vCalcDisplay( void *pvParameters ) {			// von Binär zu Temp rechnen
-	int test = 0;
+
+
+void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array ziehen, wie Temp
+//	uint16_t arraySynch[4] = {0};									// arraydaten von Global abspeichern
+	uint16_t arrayLenght[4] = {0};									// 
+	uint16_t arrayDifference[16] = {0};								// 
+	uint16_t arrayCRC[4] = {0};										// Checksumme
+	float temp = 0;	
 	for(;;) {
+		xEventGroupWaitBits(egEventsBits, dataBlockReady, false, true, portMAX_DELAY);
+// 		for (int r; r <= 4; r++) {
+// 			// arraySynch[3 - r] = array[r] von vGetDifference mit 0-3;						// reihenfolge umkehren (
+// 			
+// 		}
+		for (int r; r <= 4; r++) {
+			// arrayLenght[3 - r] = array[r + 4] von vGetDifference mit 0-3;						// reihenfolge umkehren (
+			
+		}
+		for (int r; r <= 16; r++) {
+			// arrayDifference[15 - r] = array[r + 8] von vGetDifference mit 0-3;						// reihenfolge umkehren (
+			
+		}
+		for (int r; r <= 4; r++) {
+			// arrayCRC[3 - r] = array[r + 24] von vGetDifference mit 0-3;						// reihenfolge umkehren (
+			
+		}
+		
+		dataTemp(0, temp);
+		xEventGroupClearBits(egEventsBits,dataBlockReady);
+		vTaskDelay(100);
+	}
+	
+} 
+
+float dataTemp (int mode, float temp) {
+	static float temperature;
+	switch (mode) {
+	case 0:							// schreiben
+		temperature = temp;
+		break;
+	case 1:							// lesen
+		return temperature;
+		//break; 
+	}
+		
+}
+			
+void vDisplay( void *pvParameters ) {			// von Binär zu Temp rechnen
+	float test = 0;								// TBD löschen wenn temp erfolgreich übergeben möglich
+	float temp = 0;
+	for(;;) {
+		temp = round(dataTemp(1,0)) + 0.005; // 0.0005
 		vDisplayClear();
 		vDisplayWriteStringAtPos(0,0,"QAM - Projekt");
 		vDisplayWriteStringAtPos(1,0,"TSE 2009");
 		vDisplayWriteStringAtPos(2,0,"");
-		vDisplayWriteStringAtPos(3,0,"Temperatur: %d G C", test);
+		vDisplayWriteStringAtPos(3,0,"Temperatur: %f G C", test);
 		test++;
 		vTaskDelay( 500 / portTICK_RATE_MS );
 	}

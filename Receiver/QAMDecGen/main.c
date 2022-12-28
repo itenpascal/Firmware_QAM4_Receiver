@@ -53,6 +53,67 @@ EventGroupHandle_t egEventsBits = NULL;
 #define dataBlockReady	0x02				// Wenn alle 28 Plätze gefüllt sind Daten abholen zur Verarbeitung
 //#define BLOCKED		0x04				// 
 
+#define LOCK_WRITER 1
+#define myLock 1
+
+typedef struct RWLockManagement {
+	SemaphoreHandle_t groupSeparator;
+	signed long currentReaderCounter;
+	volatile unsigned long readerSpinLock;
+}RWLockManagement_t;
+
+unsigned long CreateRWLock(RWLockManagement_t *Lock) {
+	unsigned long a_Result = 0;
+	Lock->groupSeparator = xSemaphoreCreateBinary();
+	if (Lock->groupSeparator) {
+		Lock->currentReaderCounter = 0;
+		Lock->readerSpinLock = 0;
+		if (xSemaphoreGive(Lock->groupSeparator) == pdTRUE) {
+			a_Result = 1;
+		}
+	}
+}
+
+unsigned short incrementReader(RWLockManagement_t * Lock) {
+	if(Lock->currentReaderCounter++ == 0) {
+		return 1;
+	}
+	return 0;
+}
+
+unsigned short decrementReader(RWLockManagement_t * Lock) {
+	if(--Lock->currentReaderCounter == 0) {
+		return 1;
+	}
+	return 0;
+}
+
+void claimRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
+	if(Mode == LOCK_WRITER) {
+		xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
+		} else {
+		if(incrementReader(Lock)) {
+			xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
+			Lock->readerSpinLock = 1;
+		}
+		while(!Lock->readerSpinLock) {
+			vTaskDelay(2);
+		}
+	}
+	
+}
+
+void releaseRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
+	if(Mode == LOCK_WRITER) {
+		xSemaphoreGive(Lock->groupSeparator);
+		} else {
+		if(decrementReader(Lock)) {
+			Lock->readerSpinLock = 0;
+			xSemaphoreGive(Lock->groupSeparator);
+		}
+	}
+}
+
 void vApplicationIdleHook( void )
 {	
 	
@@ -229,7 +290,7 @@ void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array 
 	uint16_t arrayCRC[4] = {0};										// Checksumme
 	float temp = 0;	
 	for(;;) {
-		xEventGroupWaitBits(egEventsBits, dataBlockReady, false, true, portMAX_DELAY);
+		xEventGroupWaitBits(egEventsBits, dataBlockReady, false, true, portMAX_DELAY);	// warten bis Signalbit gesetzt
 // 		for (int r; r <= 4; r++) {
 // 			// arraySynch[3 - r] = array[r] von vGetDifference mit 0-3;						// reihenfolge umkehren (
 // 			
@@ -247,8 +308,16 @@ void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array 
 			
 		}
 		
-		dataTemp(0, temp);
-		xEventGroupClearBits(egEventsBits,dataBlockReady);
+		/* 
+		
+		 Umrechnen der Daten
+		 
+		*/ 
+		
+		claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
+		dataTemp(0, temp);										// 0 = schreiber, temp = Daten
+		releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
+		xEventGroupClearBits(egEventsBits,dataBlockReady);		// Rücksetzen der Signalbits
 		vTaskDelay(100);
 	}
 	
@@ -264,14 +333,15 @@ float dataTemp (int mode, float temp) {
 		return temperature;
 		//break; 
 	}
-		
 }
 			
 void vDisplay( void *pvParameters ) {			// von Binär zu Temp rechnen
 	float test = 0;								// TBD löschen wenn temp erfolgreich übergeben möglich
 	float temp = 0;
 	for(;;) {
-		temp = round(dataTemp(1,0)) + 0.005; // 0.0005
+		claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
+		temp = round(dataTemp(1,0)) + 0.005; // 0.0005			// 1 = leser, 0 keine Daten
+		releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
 		vDisplayClear();
 		vDisplayWriteStringAtPos(0,0,"QAM - Projekt");
 		vDisplayWriteStringAtPos(1,0,"TSE 2009");
@@ -301,7 +371,7 @@ uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) 
 				xEventGroupClearBits(egEventsBits, newDataBit);							// Rücksetzen damit Datenabgeholt ersichtlich und nur einmal abholen
 				return speicher; 
 				//break;
-			} else {
+			} else { 
 				return -1;
 				//break;
 			}
@@ -311,63 +381,4 @@ uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) 
 	}	
 }
 */
-/*
-#define LOCK_WRITER 1
 
-typedef struct RWLockManagement {
-	SemaphoreHandle_t groupSeparator;
-	signed long currentReaderCounter;
-	volatile unsigned long readerSpinLock;
-}RWLockManagement_t;
-
-unsigned long CreateRWLock(RWLockManagement_t *Lock) {
-	unsigned long a_Result = 0;
-	Lock->groupSeparator = xSemaphoreCreateBinary();
-	if (Lock->groupSeparator) {
-		Lock->currentReaderCounter = 0;
-		Lock->readerSpinLock = 0;
-		if (xSemaphoreGive(Lock->groupSeparator) == pdTRUE) {
-			a_Result = 1;
-		}
-	}
-}
-
-unsigned short incrementReader(RWLockManagement_t * Lock) {
-	if(Lock->currentReaderCounter++ == 0) {
-		return 1;
-	}
-	return 0;
-}
-
-unsigned short decrementReader(RWLockManagement_t * Lock) {
-	if(--Lock->currentReaderCounter == 0) {
-		return 1;
-	}
-	return 0;
-}
-
-void claimRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
-	if(Mode == LOCK_WRITER) {
-		xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
-		} else {
-		if(incrementReader(Lock)) {
-			xSemaphoreTake(Lock->groupSeparator, portMAX_DELAY);
-			Lock->readerSpinLock = 1;
-		}
-		while(!Lock->readerSpinLock) {
-			vTaskDelay(2);
-		}
-	}
-	
-}
-
-void releaseRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
-	if(Mode == LOCK_WRITER) {
-		xSemaphoreGive(Lock->groupSeparator);
-		} else {
-		if(decrementReader(Lock)) {
-			Lock->readerSpinLock = 0;
-			xSemaphoreGive(Lock->groupSeparator);
-		}
-	}
-}*/

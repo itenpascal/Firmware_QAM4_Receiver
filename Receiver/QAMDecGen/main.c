@@ -134,10 +134,10 @@ int main(void)
 	initDecDMA();
 	//dataPointer(0,0);
 	
-	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 3, NULL);		// 2B commented out during real-testing, saving some space and further
+	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 3, NULL);			// 2B commented out during real-testing, saving some space and further
 	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 3, NULL);
-	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
-	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
+	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 1, NULL);
+	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 1, NULL);
 	xTaskCreate(vCalcData, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 1, calculator);
 	xTaskCreate(vDisplay, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 2, NULL);		// https://www.mikrocontroller.net/topic/1198
 
@@ -154,22 +154,22 @@ int main(void)
 void vGetPeak( void *pvParameters ) {
 int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in einem Weiteren Array abspeichern
 	static int speicherRead_1D = 0;
-	uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};										// Zeigt die aktuelle Position wo geschrieben wird
+	//uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};										// Zeigt die aktuelle Position wo geschrieben wird
 	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
 	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelesen wird wenn Ende
 	for (;;) {
-		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?
+		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?)
 		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 		
-		if (speicherPointer - counterWaveLenghtEnd <= 32){
-			counterWaveLenghtEnd = speicherPointer;
+		if (speicherWrite - counterWaveLenghtEnd <= 32){
+			counterWaveLenghtEnd = speicherWrite;
 			counterWaveLenghtstart = counterWaveLenghtEnd -32;
 			int c = 0;																	// zähler für den addresspointer im Array 2
 			for (int a = counterWaveLenghtstart; a < counterWaveLenghtEnd; a++) {		// für 32 Werte pro welle höchstwert ermitteln
 				c++;
-				if(array[a] > actualPeak) {												// Finden vom H�chstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
+				if(array[a] > actualPeak) {												// Finden vom Höchstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
 					actualPeak = array[a];												// Übergabe vom neuen Höchstwert
-					array2[c] = a%32;													// Position vom H�chstwert der welle wird gespeichert
+					array2[c] = a%32;													// Position vom Höchstwert der welle wird gespeichert
 				}
 				if (c >= 32) {
 					c = 0;
@@ -178,24 +178,24 @@ int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in
 			} 
 		}
 		speicherRead_1D++;
-		if(speicherRead_1D >=28) {															// Rücksetzen  auf 0 wenn max + 1
+		if(speicherRead_1D >=28) {														// Rücksetzen  auf 0 wenn max + 1
 			speicherRead_1D = 0;
 			xEventGroupSetBits(egEventsBits,dataBlockReady);
 		}
 		vTaskDelay(100/ portTICK_RATE_MS );
 	}
-	// vTaskSuspend;																		// Damit keine Resourcen besetzt wenn nicht n�tig
+	// vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nötig
 }
 
 
 
-void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den h�chstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.	
+void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den höchstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.	
 	uint32_t TimeTable[32] = {3125,6250,9375,12500,15625,18750,21875,25000,			// TimeTable wo die MessPunkte in 10^-8 Sekunden hinterlegt sind.
 							  28125,31250,34375,37500,40625,43750,46875,50000,
 							  53125,56250,59375,62500,65625,68750,71875,75000,
-							  78125,81250,84375,87500,90625,93750,96875,100000};	// Wir warscheindlich nicht ben�tigt 06.12.2022 PS
-	uint32_t HoechstwertPos1 = 0;													// Variable f�r aktuelle Position vom H�chstwert
-	uint32_t HoechstwertPos2 = 0;													// Variabel f�r n�chste Position H�chstwert	
+							  78125,81250,84375,87500,90625,93750,96875,100000};	// Wir warscheindlich nicht benötigt 06.12.2022 PS
+	uint32_t HoechstwertPos1 = 0;													// Variable för aktuelle Position vom Höchstwert
+	uint32_t HoechstwertPos2 = 0;													// Variabel för nöchste Position Höchstwert	
 	uint32_t DifferenzPos = 0;
 	uint8_t  WellenWert[28] = {NULL};												// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
 	
@@ -314,13 +314,12 @@ void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array 
 		 
 		*/ 
 		
-		claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
+	//	claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
 		dataTemp(0, temp);										// 0 = schreiber, temp = Daten
-		releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
+	//	releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
 		xEventGroupClearBits(egEventsBits,dataBlockReady);		// Rücksetzen der Signalbits
 		vTaskDelay(100);
 	}
-	
 } 
 
 float dataTemp (int mode, float temp) {
@@ -336,17 +335,23 @@ float dataTemp (int mode, float temp) {
 }
 			
 void vDisplay( void *pvParameters ) {			// von Binär zu Temp rechnen
-	float test = 0;								// TBD löschen wenn temp erfolgreich übergeben möglich
+	int test = 0;								// TBD löschen wenn temp erfolgreich übergeben möglich
 	float temp = 0;
+	bool halfSec = 0;							// Datenabholen ale .5 Sekunden, darstellen jede Sekunde 
 	for(;;) {
-		claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
+	//	claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
 		temp = round(dataTemp(1,0)) + 0.005; // 0.0005			// 1 = leser, 0 keine Daten
-		releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
-		vDisplayClear();
-		vDisplayWriteStringAtPos(0,0,"QAM - Projekt");
-		vDisplayWriteStringAtPos(1,0,"TSE 2009");
-		vDisplayWriteStringAtPos(2,0,"");
-		vDisplayWriteStringAtPos(3,0,"Temperatur: %f G C", test);
+	//	releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
+		if (halfSec) {
+			vDisplayClear();
+			vDisplayWriteStringAtPos(0,0,"QAM - Projekt");
+			vDisplayWriteStringAtPos(1,0,"TSE 2009");
+			vDisplayWriteStringAtPos(2,0,"");
+			vDisplayWriteStringAtPos(3,0,"Temperatur: %d G C", test);
+			halfSec = false;
+		} else {
+			halfSec = true;
+		}
 		test++;
 		vTaskDelay( 500 / portTICK_RATE_MS );
 	}

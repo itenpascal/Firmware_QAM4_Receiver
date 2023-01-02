@@ -66,13 +66,32 @@ void vQuamDec(void* pvParameters)
 						xEventGroupSetBits(egEventBits,RISEEDGE);								// Anfangen Werte zu speichern für 28*32Werte
 					}
 				}
+//  				speicher[1] = speicher[0];
+// 					speicher[2] = speicher[1];
+//  				speicher[3] = speicher[2];
+				
 				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// Freigabe wenn oben erfüllt
-					for (a = 0; a <= 4*NR_OF_ARRAY_WHOLE; a++) {								// 28*32 = 896, mit 1'000+ genug Spiel wenn langsamer und Readfunktion mit >32 auch
-						array[a % NR_OF_ARRAY_WHOLE] = bufferelement[a % NR_OF_ARRAY_2D];		// speichern aktueller Wert
-						speicherWrite = a;														// abgeschlossener Schreibzyklus speicher für readTask
-					}	
-					xEventGroupClearBits(egEventBits,RISEEDGE);									// wenn durchgelaufen, wieder Rücksetzten für nächste Starterkennung
+/*
+// 					for (a = 0; a <= 4*NR_OF_ARRAY_WHOLE; a++) {								// 28*32 = 896, mit 1'000+ genug Spiel wenn langsamer und Readfunktion mit >32 auch
+// 						array[a % NR_OF_ARRAY_WHOLE] = bufferelement[a % NR_OF_ARRAY_2D];		// speichern aktueller Wert
+// 						speicherWrite = a;														// abgeschlossener Schreibzyklus speicher für readTask
+// 					}	
+// 					xEventGroupClearBits(egEventBits,RISEEDGE);									// wenn durchgelaufen, wieder Rücksetzten für nächste Starterkennung
+*/
+					array[a % NR_OF_ARRAY_WHOLE] = bufferelement[0];							// Wert abspeichern von queue auf Platz [0]
+					speicherWrite = a;															// abgeschlossener Schreibzyklus speicher für readTask
+					a++;
+					
+					if(a >= 4*NR_OF_ARRAY_WHOLE) {
+						a = 0;
+						speicher[0] = 0;														// Speicher wieder zurücksetzen
+						speicher[1] = 0;
+						speicher[2] = 0;
+						speicher[3] = 0;
+						xEventGroupClearBits(egEventBits,RISEEDGE);								// wenn durchgelaufen, wieder Rücksetzten für nächste Starterkennung
+					}
 				}
+				
 			}
 		}		
 		vTaskDelay( 2 / portTICK_RATE_MS );

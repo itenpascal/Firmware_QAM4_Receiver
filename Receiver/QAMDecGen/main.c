@@ -154,15 +154,15 @@ int main(void)
 void vGetPeak( void *pvParameters ) {
 int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in einem Weiteren Array abspeichern
 	static int speicherRead_1D = 0;
-	uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};										// Zeigt die aktuelle Position wo geschrieben wird
+	//uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};										// Zeigt die aktuelle Position wo geschrieben wird
 	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
 	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelesen wird wenn Ende
 	for (;;) {
 		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?
 		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 		
-		if (speicherPointer - counterWaveLenghtEnd <= 32){
-			counterWaveLenghtEnd = speicherPointer;
+		if (speicherWrite - counterWaveLenghtEnd <= 32){
+			counterWaveLenghtEnd = speicherWrite;
 			counterWaveLenghtstart = counterWaveLenghtEnd -32;
 			int c = 0;																	// zähler für den addresspointer im Array 2
 			for (int a = counterWaveLenghtstart; a < counterWaveLenghtEnd; a++) {		// für 32 Werte pro welle höchstwert ermitteln

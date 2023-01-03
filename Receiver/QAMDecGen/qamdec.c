@@ -57,10 +57,10 @@ void vQuamDec(void* pvParameters)
 	for(;;) {
 		while(uxQueueMessagesWaiting(decoderQueue) > 0) {
 			if(xQueueReceive(decoderQueue, &bufferelement[0], portMAX_DELAY) == pdTRUE) {
-				speicher[0] = bufferelement[0];
-				speicher[1] = speicher[0];
-				speicher[2] = speicher[1];
 				speicher[3] = speicher[2];
+				speicher[2] = speicher[1];
+				speicher[1] = speicher[0];
+				speicher[0] = bufferelement[0];
 				if (speicher[0] > (adWert/1.9)) {												// ausserhalb idle Bereich
 					if (speicher[0] > speicher[3]) {											// Steigende Flanke erkannt
 						xEventGroupSetBits(egEventBits,RISEEDGE);								// Anfangen Werte zu speichern für 28*32Werte

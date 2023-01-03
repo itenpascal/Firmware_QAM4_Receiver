@@ -158,10 +158,10 @@ int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in
 	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
 	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelesen wird wenn Ende
 	for (;;) {
-		xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?)
+		//xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?)
 		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 		
-		if (speicherWrite - counterWaveLenghtEnd <= 32){
+		if (speicherWrite - counterWaveLenghtEnd >= 32){
 			counterWaveLenghtEnd = speicherWrite;
 			counterWaveLenghtstart = counterWaveLenghtEnd -32;
 			int c = 0;																	// zähler für den addresspointer im Array 2

@@ -38,6 +38,7 @@ extern uint16_t speicherWrite;
 
 void vQuamDec(void* pvParameters)
 {
+	egEventBits = xEventGroupCreate();
 	( void ) pvParameters;
 	decoderQueue = xQueueCreate( 4, NR_OF_SAMPLES * sizeof(int16_t) );
 	

@@ -62,6 +62,10 @@ void vQuamDec(void* pvParameters)
 				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// wenn bit NICHT aktiv
 					
 				} else {
+					
+					
+					
+					
 					for(; r <= NR_OF_ARRAY_2D - 1; r++) {										// alle bufferelemente prüfen 
 						if (bufferelement[r] > (adWert/1.8)) {									// wenn bufferelement ausserhalb idle Bereich
 							speicher[3] = speicher[2];
@@ -78,9 +82,15 @@ void vQuamDec(void* pvParameters)
 						}
 					}
 					r = 0;
+					
+					
+					
+					
+					
+					
 				}
 				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// Freigabe wenn oben erf�llt
- 					for (; a <= 4*NR_OF_ARRAY_WHOLE;) {											// 28*32 = 896, mit 1'000+ genug Spiel wenn langsamer und Readfunktion mit >32 auch
+ 					while (a <= 4*NR_OF_ARRAY_WHOLE) {											// 28*32 = 896, mit 1'000+ genug Spiel wenn langsamer und Readfunktion mit >32 auch
  						array[a % NR_OF_ARRAY_WHOLE] = bufferelement[a % NR_OF_ARRAY_2D];		// speichern aktueller Wert
  						speicherWrite = a;														// abgeschlossener Schreibzyklus speicher f�r readTask
 						a++;																	// raufzählen, vor nächstem if, damit richtig geteilt wird
@@ -88,17 +98,24 @@ void vQuamDec(void* pvParameters)
 							break;
 						}
  					}
+					 
+					 
+					 
+					 
+					 
+					 
+					 
+					 
 					if(a >= 4*NR_OF_ARRAY_WHOLE) {												// Speicher wieder zur�cksetzen
-						a = 0;
 						speicher[0] = 10000;														
 						speicher[1] = 10000;
 						speicher[2] = 10000;
 						speicher[3] = 10000;
-						speicherWrite = 0;
+						//speicherWrite = 0;
 						xEventGroupClearBits(egEventBits,RISEEDGE);								// wenn durchgelaufen, wieder R�cksetzten f�r n�chste Starterkennung
+						a = 0;
 					}
 				}
-				
 			}
 		}		
 		vTaskDelay( 2 / portTICK_RATE_MS );

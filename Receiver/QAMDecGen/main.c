@@ -133,13 +133,14 @@ int main(void)
 	initADCTimer();
 	initDecDMA();
 	//dataPointer(0,0);
+	egEventsBits = xEventGroupCreate();
 	
-	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 3, NULL);			// 2B commented out during real-testing, saving some space and further
-	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 3, NULL);
-	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 1, NULL);
-	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 1, NULL);
-	xTaskCreate(vCalcData, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 1, calculator);
-	xTaskCreate(vDisplay, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 2, NULL);		// https://www.mikrocontroller.net/topic/1198
+	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 1, NULL);			// 2B commented out during real-testing, saving some space and further
+	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
+	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 2, NULL);
+	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 2, NULL);
+	xTaskCreate(vCalcData, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 2, calculator);
+	xTaskCreate(vDisplay, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 3, NULL);		// https://www.mikrocontroller.net/topic/1198
 
 
 	vDisplayClear();
@@ -158,20 +159,19 @@ int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in
 	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
 	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelesen wird wenn Ende
 	for (;;) {
-		//xEventGroupWaitBits(egEventsBits, newDataBit, false, true, portMAX_DELAY);	// wait for newdata arrived	(Wird nicht mehr benötigt?)
 		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
 		
-		if (speicherWrite - counterWaveLenghtEnd >= 32){
+		if (speicherWrite - counterWaveLenghtEnd > 32){
 			counterWaveLenghtEnd = speicherWrite;
 			counterWaveLenghtstart = counterWaveLenghtEnd -32;
 			int c = 0;																	// zähler für den addresspointer im Array 2
 			for (int a = counterWaveLenghtstart; a < counterWaveLenghtEnd; a++) {		// für 32 Werte pro welle höchstwert ermitteln
 				c++;
-				if(array[a] > actualPeak) {												// Finden vom Höchstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
-					actualPeak = array[a];												// Übergabe vom neuen Höchstwert
-					array2[c] = a%32;													// Position vom Höchstwert der welle wird gespeichert
-				}
-				if (c >= 32) {
+//				if(array[a] > actualPeak) {												// Finden vom Höchstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
+//					actualPeak = array[a];												// Übergabe vom neuen Höchstwert
+// 					array2[c] = a%32;													// Position vom Höchstwert der welle wird gespeichert
+// 				}
+ 				if (c >= 32) {
 					c = 0;
 				}
 				actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
@@ -182,12 +182,10 @@ int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in
 			speicherRead_1D = 0;
 			xEventGroupSetBits(egEventsBits,dataBlockReady);
 		}
-		vTaskDelay(100/ portTICK_RATE_MS );
+		vTaskDelay(4/ portTICK_RATE_MS );
 	}
 	// vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nötig
 }
-
-
 
 void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den höchstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.	
 	uint32_t TimeTable[32] = {3125,6250,9375,12500,15625,18750,21875,25000,			// TimeTable wo die MessPunkte in 10^-8 Sekunden hinterlegt sind.
@@ -282,7 +280,6 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	}
 }
 
-
 void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array ziehen, wie Temp
 //	uint16_t arraySynch[4] = {0};									// arraydaten von Global abspeichern
 	uint16_t arrayLenght[4] = {0};									// 
@@ -356,34 +353,3 @@ void vDisplay( void *pvParameters ) {			// von Binär zu Temp rechnen
 		vTaskDelay( 500 / portTICK_RATE_MS );
 	}
 }
-
-/*
-uint16_t *dataPointer(int mode, int speicher_1D, uint16_t data[NR_OF_ARRAY_2D]) {
-	static uint16_t speicher[NR_OF_ARRAY_1D][NR_OF_ARRAY_2D];
-	static int speicherWrite;															// 0 - 27, aktueller Standort im 1D Array
-	switch (mode) {
-		case 0:			// write 
-			for(int a = 0; a < NR_OF_ARRAY_2D; a++) {
-				speicher[speicher_1D][a] = data[a];
-			}
-			speicherWrite = speicher_1D;
-			xEventGroupSetBits(egEventsBits, newDataBit);
-			
-			return 0;
-			//break;
-		case 1:			// read
-			if (xEventGroupGetBits(egEventsBits) & newDataBit)  {						// wird von write geschrieben
-				xEventGroupClearBits(egEventsBits, newDataBit);							// Rücksetzen damit Datenabgeholt ersichtlich und nur einmal abholen
-				return speicher; 
-				//break;
-			} else { 
-				return -1;
-				//break;
-			}
-		default:
-			return -1;
-			//break;
-	}	
-}
-*/
-

@@ -45,7 +45,7 @@ void vQuamDec(void* pvParameters)
 	while(evDMAState == NULL) {
 		vTaskDelay(3/portTICK_RATE_MS);
 	}
-	
+	xEventGroupClearBits(egEventBits,RISEEDGE);
 	uint16_t bufferelement[NR_OF_SAMPLES];														// 32 Samples max
 	int block = 0;
 	uint64_t runner = 0;																		// runner, just counts up by Nr_of_samples to 2^64
@@ -53,45 +53,47 @@ void vQuamDec(void* pvParameters)
 	uint16_t adWert = 2200;																		// maxwert TBD
 	static int speicher_1D = 0;
 	unsigned int a = 0;
+	unsigned int r = 0;					// für 32er Loop
 	
 	xEventGroupWaitBits(evDMAState, DMADECREADY, false, true, portMAX_DELAY);
 	for(;;) {
 		while(uxQueueMessagesWaiting(decoderQueue) > 0) {
 			if(xQueueReceive(decoderQueue, &bufferelement[0], portMAX_DELAY) == pdTRUE) {
-				speicher[3] = speicher[2];
-				speicher[2] = speicher[1];
-				speicher[1] = speicher[0];
-				speicher[0] = bufferelement[0];
-			//	speicher[1] = speicher[0];
-			//	speicher[2] = speicher[1];
-			//	speicher[3] = speicher[2];
-				if (speicher[0] > (adWert/1.9)) {												// ausserhalb idle Bereich
-					if (speicher[0] > speicher[3]) {											// Steigende Flanke erkannt
-						xEventGroupSetBits(egEventBits,RISEEDGE);								// Anfangen Werte zu speichern f�r 28*32Werte
-					}
-				}
-//  				speicher[1] = speicher[0];
-// 					speicher[2] = speicher[1];
-//  				speicher[3] = speicher[2];
-				
-				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// Freigabe wenn oben erf�llt
-/*
-// 					for (a = 0; a <= 4*NR_OF_ARRAY_WHOLE; a++) {								// 28*32 = 896, mit 1'000+ genug Spiel wenn langsamer und Readfunktion mit >32 auch
-// 						array[a % NR_OF_ARRAY_WHOLE] = bufferelement[a % NR_OF_ARRAY_2D];		// speichern aktueller Wert
-// 						speicherWrite = a;														// abgeschlossener Schreibzyklus speicher f�r readTask
-// 					}	
-// 					xEventGroupClearBits(egEventBits,RISEEDGE);									// wenn durchgelaufen, wieder R�cksetzten f�r n�chste Starterkennung
-*/
-					array[a % NR_OF_ARRAY_WHOLE] = bufferelement[0];							// Wert abspeichern von queue auf Platz [0]
-					speicherWrite = a;															// abgeschlossener Schreibzyklus speicher f�r readTask
-					a++;
+				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// wenn bit NICHT aktiv
 					
-					if(a >= 4*NR_OF_ARRAY_WHOLE) {
+				} else {
+					for(; r <= NR_OF_ARRAY_2D - 1; r++) {										// alle bufferelemente prüfen 
+						if (bufferelement[r] > (adWert/1.8)) {									// wenn bufferelement ausserhalb idle Bereich
+							speicher[3] = speicher[2];
+							speicher[2] = speicher[1];
+							speicher[1] = speicher[0];
+							speicher[0] = bufferelement[r];
+							if (bufferelement[r] > speicher[3]) {								// Steigende Flanke erkannt
+								xEventGroupSetBits(egEventBits,RISEEDGE);						// Anfangen Werte zu speichern f�r 28*32Werte
+								r = 0;
+								break;
+							}
+						} else {
+							speicher[0] = 10000;
+						}
+					}
+					r = 0;
+				}
+				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// Freigabe wenn oben erf�llt
+ 					for (; a <= 4*NR_OF_ARRAY_WHOLE;) {											// 28*32 = 896, mit 1'000+ genug Spiel wenn langsamer und Readfunktion mit >32 auch
+ 						array[a % NR_OF_ARRAY_WHOLE] = bufferelement[a % NR_OF_ARRAY_2D];		// speichern aktueller Wert
+ 						speicherWrite = a;														// abgeschlossener Schreibzyklus speicher f�r readTask
+						a++;																	// raufzählen, vor nächstem if, damit richtig geteilt wird
+						if ((a % NR_OF_ARRAY_2D) == 0) {
+							break;
+						}
+ 					}
+					if(a >= 4*NR_OF_ARRAY_WHOLE) {												// Speicher wieder zur�cksetzen
 						a = 0;
-						speicher[0] = 0;														// Speicher wieder zur�cksetzen
-						speicher[1] = 0;
-						speicher[2] = 0;
-						speicher[3] = 0;
+						speicher[0] = 10000;														
+						speicher[1] = 10000;
+						speicher[2] = 10000;
+						speicher[3] = 10000;
 						speicherWrite = 0;
 						xEventGroupClearBits(egEventBits,RISEEDGE);								// wenn durchgelaufen, wieder R�cksetzten f�r n�chste Starterkennung
 					}

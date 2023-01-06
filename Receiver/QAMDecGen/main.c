@@ -153,30 +153,29 @@ int main(void)
 }
 
 void vGetPeak( void *pvParameters ) {
-int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in einem Weiteren Array abspeichern
+	//int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in einem Weiteren Array abspeichern
 	static int speicherRead_1D = 0;
-	//uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};										// Zeigt die aktuelle Position wo geschrieben wird
+	//uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};									// Zeigt die aktuelle Position wo geschrieben wird
 	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
 	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelesen wird wenn Ende
+	int c = 0;																			// zähler für den addresspointer im Array 2
+	uint16_t actualPeak = 0;															// Zwischenspeicher des höchsten Werts
 	for (;;) {
-		uint16_t actualPeak = 0;														// Zwischenspeicher des höchsten Werts
-		
 		if (speicherWrite - counterWaveLenghtEnd > 32){
 			counterWaveLenghtEnd = speicherWrite;
 			counterWaveLenghtstart = counterWaveLenghtEnd -32;
-			int c = 0;																	// zähler für den addresspointer im Array 2
 			for (int a = counterWaveLenghtstart; a < counterWaveLenghtEnd; a++) {		// für 32 Werte pro welle höchstwert ermitteln
-				c++;
-//				if(array[a] > actualPeak) {												// Finden vom Höchstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
-//					actualPeak = array[a];												// Übergabe vom neuen Höchstwert
-// 					array2[c] = a%32;													// Position vom Höchstwert der welle wird gespeichert
-// 				}
- 				if (c >= 32) {
-					c = 0;
+				if(array[a] > actualPeak) {												// Finden vom Höchstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
+					actualPeak = array[a];												// Übergabe vom neuen Höchstwert
+					array2[c] = a%32;													// Position vom Höchstwert der welle wird gespeichert
 				}
-				actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
-			} 
-		}
+			}
+			c++;
+ 			if (c >= NR_OF_ARRAY_1D) {
+				c = 0;
+			}
+			actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
+		} 
 		speicherRead_1D++;
 		if(speicherRead_1D >=28) {														// Rücksetzen  auf 0 wenn max + 1
 			speicherRead_1D = 0;

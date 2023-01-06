@@ -81,13 +81,7 @@ void vQuamDec(void* pvParameters)
 							speicher[0] = 10000;
 						}
 					}
-					r = 0;
-					
-					
-					
-					
-					
-					
+					r = 0;	
 				}
 				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// Freigabe wenn oben erf�llt
  					while (a <= 4*NR_OF_ARRAY_WHOLE) {											// 28*32 = 896, mit 1'000+ genug Spiel wenn langsamer und Readfunktion mit >32 auch
@@ -98,14 +92,6 @@ void vQuamDec(void* pvParameters)
 							break;
 						}
  					}
-					 
-					 
-					 
-					 
-					 
-					 
-					 
-					 
 					if(a >= 4*NR_OF_ARRAY_WHOLE) {												// Speicher wieder zur�cksetzen
 						speicher[0] = 10000;														
 						speicher[1] = 10000;

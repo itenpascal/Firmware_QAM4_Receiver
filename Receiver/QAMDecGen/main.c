@@ -193,83 +193,85 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 							  78125,81250,84375,87500,90625,93750,96875,100000};	// Wir warscheindlich nicht benötigt 06.12.2022 PS
 	uint32_t HoechstwertPos1 = 0;													// Variable för aktuelle Position vom Höchstwert
 	uint32_t HoechstwertPos2 = 0;													// Variabel för nöchste Position Höchstwert	
-	uint32_t DifferenzPos = 0;
+	int32_t DifferenzPos = 0;
+	int a = 0;
 	uint8_t  WellenWert[28] = {NULL};												// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
 	
 	for(;;) {
 		for(int i = 0; i <= 27; i ++){
 			HoechstwertPos1 = TimeTable[array2[i]];
-			HoechstwertPos2 = TimeTable[array2[i++]];
-			DifferenzPos = HoechstwertPos2-HoechstwertPos1;
+			a = i+1;
+			HoechstwertPos2 = TimeTable[array2[a]];
+			DifferenzPos = HoechstwertPos2+HoechstwertPos1;
 			if(i<=3){
 				if(DifferenzPos == 100000){											// Toleranzbereich? aktuell nur perfekte Werte möglich:
-					WellenWert[i++] = 0;											// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
+					WellenWert[a] = 0;											// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
 				}
 				if(DifferenzPos == 175000){	
-					WellenWert[i++] = 2;
+					WellenWert[a] = 2;
 				}
 				if(DifferenzPos == 150000){
-					WellenWert[i++] = 3;
+					WellenWert[a] = 3;
 				}
 				if(DifferenzPos == 125000){
-					WellenWert[i++] = 1;
+					WellenWert[a] = 1;
 				}
 			}
 			else{
-				if(WellenWert[0] == 0){
+				if(WellenWert[i] == 0){
 					if(DifferenzPos == 100000){
-						WellenWert[i++] = 0;
+						WellenWert[a] = 0;
 					}
 					if(DifferenzPos == 175000){
-						WellenWert[i++] = 2;
+						WellenWert[a] = 2;
 					}
 					if(DifferenzPos == 150000){
-						WellenWert[i++] = 3;
+						WellenWert[a] = 3;
 					}
 					if(DifferenzPos == 125000){
-						WellenWert[i++] = 1;
+						WellenWert[a] = 1;
 					}
 				}
-				if(WellenWert[0] == 1){
+				if(WellenWert[i] == 1){
 					if(DifferenzPos == 75000){
-						WellenWert[i++] = 0;
+						WellenWert[a] = 0;
 					}
 					if(DifferenzPos == 150000){
-						WellenWert[i++] = 2;
+						WellenWert[a] = 2;
 					}
 					if(DifferenzPos == 125000){
-						WellenWert[i++] = 3;
+						WellenWert[a] = 3;
 					}
 					if(DifferenzPos == 100000){
-						WellenWert[i++] = 1;
+						WellenWert[a] = 1;
 					}
 				}
-				if(WellenWert[0] == 2){
+				if(WellenWert[i] == 2){
 					if(DifferenzPos == 25000){
-						WellenWert[i++] = 0;
+						WellenWert[a] = 0;
 					}
 					if(DifferenzPos == 100000){
-						WellenWert[i++] = 2;
+						WellenWert[a] = 2;
 					}
 					if(DifferenzPos == 75000){
-						WellenWert[i++] = 3;
+						WellenWert[a] = 3;
 					}
 					if(DifferenzPos == 50000){
-						WellenWert[i++] = 1;
+						WellenWert[a] = 1;
 					}
 				}
-				if(WellenWert[0] == 3){
+				if(WellenWert[i] == 3){
 					if(DifferenzPos == 50000){
-						WellenWert[i++] = 0;
+						WellenWert[a] = 0;
 					}
 					if(DifferenzPos == 125000){
-						WellenWert[i++] = 2;
+						WellenWert[a] = 2;
 					}
 					if(DifferenzPos == 125000){
-						WellenWert[i++] = 3;
+						WellenWert[a] = 3;
 					}
 					if(DifferenzPos == 100000){
-						WellenWert[i++] = 1;
+						WellenWert[a] = 1;
 					}
 				}
 			}

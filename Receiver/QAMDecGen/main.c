@@ -46,12 +46,13 @@ TaskHandle_t calculator;
 uint16_t array[NR_OF_ARRAY_WHOLE] = {0};			// 256 Speicherplätze; darf nicht static sein (?) Fehlereldung; in qamdec.h & qam.dec.c als extern
 static uint16_t array2[NR_OF_ARRAY_1D] = {0};		// den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
 uint16_t speicherWrite = 0;
+char  WellenWert[56] = {NULL};						// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle bei Difference Rechnung
 	
 // EventGroup for different Reasons
 EventGroupHandle_t egEventsBits = NULL;
 #define newDataBit		0x01				// steigende Flanke erkannt
 #define dataBlockReady	0x02				// Wenn alle 28 Plätze gefüllt sind Daten abholen zur Verarbeitung
-//#define BLOCKED		0x04				// 
+#define binaryReady		0x04				// Wenn alle 56speicherbitsgespeichert wurden
 
 #define LOCK_WRITER 1
 #define myLock 1
@@ -175,13 +176,13 @@ void vGetPeak( void *pvParameters ) {
 				c = 0;
 			}
 			actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
-		} 
-		speicherRead_1D++;
+			speicherRead_1D++;
+		}
 		if(speicherRead_1D >=28) {														// Rücksetzen  auf 0 wenn max + 1
 			speicherRead_1D = 0;
 			xEventGroupSetBits(egEventsBits,dataBlockReady);
 		}
-		vTaskDelay(4/ portTICK_RATE_MS );
+		vTaskDelay(5/ portTICK_RATE_MS );
 	}
 	// vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nötig
 }
@@ -195,94 +196,133 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	uint32_t HoechstwertPos2 = 0;													// Variabel för nöchste Position Höchstwert	
 	int32_t DifferenzPos = 0;
 	int a = 0;
-	char  WellenWert[56] = {NULL};													// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
-	
+	//char  WellenWert[56] = {NULL};													// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
+	uint8_t lastValue = 00;
+	char test[100] = {NULL};
 	for(;;) {
 		for(int i = 0; i <= 27; i ++){
+			xEventGroupWaitBits(egEventsBits, dataBlockReady, false, true, portMAX_DELAY);	// warten bis Signalbit gesetzt
 			HoechstwertPos1 = TimeTable[array2[i]];
 			a = i+1;
 			HoechstwertPos2 = TimeTable[array2[a]];
 			DifferenzPos = HoechstwertPos2+(100000-HoechstwertPos1);
-			if(i<=3){
-<<<<<<< HEAD
-				if(DifferenzPos == 100000){											// Toleranzbereich? aktuell nur perfekte Werte möglich:
-					WellenWert[a] = 0;												// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
-=======
-				if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// Toleranzbereich? aktuell nur perfekte Werte möglich:
-					strcat( WellenWert , "00");										// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
->>>>>>> 0c6898ecf74d69c0083885d4ac2e16e4addbeec4
+			if(i<=3){	
+				if(DifferenzPos >= 85000 & DifferenzPos <=110000){						// 100k		0
+					strcat(WellenWert , "00");										
+					lastValue = 00;
+					continue;															// direkt zum Schleifanfang wieder => Durchlaufszeit sparen
 				}
-				if(DifferenzPos >= 165000 & DifferenzPos <=185000){	
-					strcat( WellenWert , "10");
+				if(DifferenzPos >= 165000 & DifferenzPos <=185000){						// 175k		2
+					strcat(WellenWert , "10");
+					lastValue = 10;
+					continue;
 				}
-				if(DifferenzPos >= 140000 & DifferenzPos <=160000){
+				if(DifferenzPos >= 140000 & DifferenzPos <=160000){						// 150k		3
 					strcat(WellenWert , "11");
+					lastValue = 11;
+					continue;
 				}
-				if(DifferenzPos >= 115000 & DifferenzPos <=135000){
+				if(DifferenzPos >= 115000 & DifferenzPos <=135000){						// 125k		1
 					strcat(WellenWert , "01");
+					lastValue = 01;
+					continue;
 				}
 			}
 			else{
-				if(0 == strncmp(WellenWert,"00",i+2)){
-					if(DifferenzPos >= 85000 & DifferenzPos <=110000){
-						strcat( WellenWert , "00");	
+				if(lastValue == 00) {	// 0
+					if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		0
+						//strcat( WellenWert , "00");	
+						lastValue = 00;
+						continue;
 					}
-					if(DifferenzPos >= 165000 & DifferenzPos <=185000){
-						strcat( WellenWert , "10");
+					if(DifferenzPos >= 165000 & DifferenzPos <=185000){					// 175k		2
+						//strcat( WellenWert , "10");
+						lastValue = 10;
+						continue;
 					}
-					if(DifferenzPos >= 140000 & DifferenzPos <=160000){
-						strcat(WellenWert , "11");
+					if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		3
+						//strcat(WellenWert , "11");
+						lastValue = 11;
+						continue;
 					}
-					if(DifferenzPos >= 115000 & DifferenzPos <=135000){
-						strcat(WellenWert , "01");
-					}
-				}
-				if(WellenWert[i] == "01"){
-					if(DifferenzPos == 75000){
-						strcat( WellenWert , "00");	
-					}
-					if(DifferenzPos >= 140000 & DifferenzPos <=160000){
-						strcat( WellenWert , "10");
-					}
-					if(DifferenzPos >= 115000 & DifferenzPos <=135000){
-						strcat(WellenWert , "11");
-					}
-					if(DifferenzPos >= 85000 & DifferenzPos <=110000){
-						strcat(WellenWert , "01");
+					if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		1
+						//strcat(WellenWert , "01");
+						lastValue = 01;
+						continue;
 					}
 				}
-				if(WellenWert[i] == "10"){
-					if(DifferenzPos >= 15000 & DifferenzPos <=35000){
-						strcat( WellenWert , "00");	
+				if(lastValue == 01){		// 1
+					if(DifferenzPos == 75000){											// 75k		0
+						//strcat( WellenWert , "00");	
+						lastValue = 00;
+						continue;
 					}
-					if(DifferenzPos >= 85000 & DifferenzPos <=110000){
-						strcat( WellenWert , "10");
+					if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		2
+						//strcat( WellenWert , "10");
+						lastValue = 10;
+						continue;
 					}
-					if(DifferenzPos >= 65000 & DifferenzPos <=80000){
-						strcat(WellenWert , "11");
+					if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		3
+						//strcat(WellenWert , "11");
+						lastValue = 11;
+						continue;
 					}
-					if(DifferenzPos >= 40000 & DifferenzPos <=60000){
-						strcat(WellenWert , "01");
+					if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		1
+						//strcat(WellenWert , "01");
+						lastValue = 01;
+						continue;
 					}
 				}
-				if(WellenWert[i] == "11"){
-					if(DifferenzPos >= 40000 & DifferenzPos <=60000){
-						strcat( WellenWert , "00");	
+				if(lastValue == 10){		// 2
+					if(DifferenzPos >= 15000 & DifferenzPos <=35000){					// 25k		0
+						//strcat( WellenWert , "00");	
+						lastValue = 00;
+						continue;
 					}
-					if(DifferenzPos >= 140000 & DifferenzPos <=160000){
-						strcat( WellenWert , "10");
+					if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		2
+						//strcat( WellenWert , "10");
+						lastValue = 10;
+						continue;
 					}
-					if(DifferenzPos >= 115000 & DifferenzPos <=135000){
-						strcat(WellenWert , "11");
+					if(DifferenzPos >= 65000 & DifferenzPos <=80000){					// 75k		3
+						//strcat(WellenWert , "11");
+						lastValue = 11;
+						continue;
 					}
-					if(DifferenzPos >= 85000 & DifferenzPos <=110000){
-						strcat(WellenWert , "01");
+					if(DifferenzPos >= 40000 & DifferenzPos <=60000){					// 50k		1
+						//strcat(WellenWert , "01");
+						lastValue = 01;
+						continue;
+					}
+				}
+				if(lastValue == 11){		//	3
+					if(DifferenzPos >= 40000 & DifferenzPos <=60000){					// 50k		0
+						//strcat( WellenWert , "00");	
+						lastValue = 00;
+						continue;
+					}
+					if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		2	
+						//strcat( WellenWert , "10");
+						lastValue = 10;
+						continue;
+					}
+					if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		3	
+						//strcat(WellenWert , "11");
+						lastValue = 11;
+						continue;
+					}
+					if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		1
+						//strcat(WellenWert , "01");
+						lastValue = 01;
+						continue;
 					}
 				}
 			}
 		}
-	vTaskDelay( 50 / portTICK_RATE_MS );
-	//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht n�tig
+		xEventGroupSetBits(egEventsBits,binaryReady);
+		xEventGroupClearBits(egEventsBits,dataBlockReady);
+		vTaskDelay( 5 / portTICK_RATE_MS );
+		//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht n�tig
 	}
 }
 
@@ -293,7 +333,7 @@ void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array 
 	uint8_t arrayCRC[4] = {0};										// Checksumme
 	float temp = 0;	
 	for(;;) {
-		xEventGroupWaitBits(egEventsBits, dataBlockReady, false, true, portMAX_DELAY);	// warten bis Signalbit gesetzt
+		xEventGroupWaitBits(egEventsBits, binaryReady, false, true, portMAX_DELAY);	// warten bis Signalbit gesetzt
 		//binaerDifference = WellenWert;
 // 		for (int r; r <= 4; r++) {
 // 			// arraySynch[3 - r] = array[r] von vGetDifference mit 0-3;						// reihenfolge umkehren (
@@ -323,7 +363,8 @@ void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array 
 	//	claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
 		dataTemp(0, temp);										// 0 = schreiber, temp = Daten
 	//	releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
-		xEventGroupClearBits(egEventsBits,dataBlockReady);		// Rücksetzen der Signalbits
+		xEventGroupClearBits(egEventsBits,binaryReady);		// Rücksetzen der Signalbits
+		strcpy(WellenWert, "");
 		vTaskDelay(100);
 	}
 } 

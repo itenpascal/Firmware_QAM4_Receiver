@@ -97,10 +97,10 @@ void fillBuffer(uint16_t buffer[NR_OF_SAMPLES]) {
 				buffer[i] = 0x800 + (sinLookup100[i+8]);
 			break;
 			case 2:
-				buffer[i] = 0x800 + (sinLookup100[i+24]);
+				buffer[i] = 0x800 + (sinLookup100[i+16]);
 			break;
 			case 3:
-				buffer[i] = 0x800 + (sinLookup100[i+16]);
+				buffer[i] = 0x800 + (sinLookup100[i+24]);
 			break;
 		}
 	}

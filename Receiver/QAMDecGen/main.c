@@ -195,83 +195,88 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 	uint32_t HoechstwertPos2 = 0;													// Variabel för nöchste Position Höchstwert	
 	int32_t DifferenzPos = 0;
 	int a = 0;
-	uint8_t  WellenWert[28] = {NULL};												// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
+	char  WellenWert[56] = {NULL};													// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
 	
 	for(;;) {
 		for(int i = 0; i <= 27; i ++){
 			HoechstwertPos1 = TimeTable[array2[i]];
 			a = i+1;
 			HoechstwertPos2 = TimeTable[array2[a]];
-			DifferenzPos = HoechstwertPos2+HoechstwertPos1;
+			DifferenzPos = HoechstwertPos2+(100000-HoechstwertPos1);
 			if(i<=3){
+<<<<<<< HEAD
 				if(DifferenzPos == 100000){											// Toleranzbereich? aktuell nur perfekte Werte möglich:
 					WellenWert[a] = 0;												// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
+=======
+				if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// Toleranzbereich? aktuell nur perfekte Werte möglich:
+					strcat( WellenWert , "00");										// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
+>>>>>>> 0c6898ecf74d69c0083885d4ac2e16e4addbeec4
 				}
-				if(DifferenzPos == 175000){	
-					WellenWert[a] = 2;
+				if(DifferenzPos >= 165000 & DifferenzPos <=185000){	
+					strcat( WellenWert , "10");
 				}
-				if(DifferenzPos == 150000){
-					WellenWert[a] = 3;
+				if(DifferenzPos >= 140000 & DifferenzPos <=160000){
+					strcat(WellenWert , "11");
 				}
-				if(DifferenzPos == 125000){
-					WellenWert[a] = 1;
+				if(DifferenzPos >= 115000 & DifferenzPos <=135000){
+					strcat(WellenWert , "01");
 				}
 			}
 			else{
-				if(WellenWert[i] == 0){
-					if(DifferenzPos == 100000){
-						WellenWert[a] = 0;
+				if(0 == strncmp(WellenWert,"00",i+2)){
+					if(DifferenzPos >= 85000 & DifferenzPos <=110000){
+						strcat( WellenWert , "00");	
 					}
-					if(DifferenzPos == 175000){
-						WellenWert[a] = 2;
+					if(DifferenzPos >= 165000 & DifferenzPos <=185000){
+						strcat( WellenWert , "10");
 					}
-					if(DifferenzPos == 150000){
-						WellenWert[a] = 3;
+					if(DifferenzPos >= 140000 & DifferenzPos <=160000){
+						strcat(WellenWert , "11");
 					}
-					if(DifferenzPos == 125000){
-						WellenWert[a] = 1;
+					if(DifferenzPos >= 115000 & DifferenzPos <=135000){
+						strcat(WellenWert , "01");
 					}
 				}
-				if(WellenWert[i] == 1){
+				if(WellenWert[i] == "01"){
 					if(DifferenzPos == 75000){
-						WellenWert[a] = 0;
+						strcat( WellenWert , "00");	
 					}
-					if(DifferenzPos == 150000){
-						WellenWert[a] = 2;
+					if(DifferenzPos >= 140000 & DifferenzPos <=160000){
+						strcat( WellenWert , "10");
 					}
-					if(DifferenzPos == 125000){
-						WellenWert[a] = 3;
+					if(DifferenzPos >= 115000 & DifferenzPos <=135000){
+						strcat(WellenWert , "11");
 					}
-					if(DifferenzPos == 100000){
-						WellenWert[a] = 1;
-					}
-				}
-				if(WellenWert[i] == 2){
-					if(DifferenzPos == 25000){
-						WellenWert[a] = 0;
-					}
-					if(DifferenzPos == 100000){
-						WellenWert[a] = 2;
-					}
-					if(DifferenzPos == 75000){
-						WellenWert[a] = 3;
-					}
-					if(DifferenzPos == 50000){
-						WellenWert[a] = 1;
+					if(DifferenzPos >= 85000 & DifferenzPos <=110000){
+						strcat(WellenWert , "01");
 					}
 				}
-				if(WellenWert[i] == 3){
-					if(DifferenzPos == 50000){
-						WellenWert[a] = 0;
+				if(WellenWert[i] == "10"){
+					if(DifferenzPos >= 15000 & DifferenzPos <=35000){
+						strcat( WellenWert , "00");	
 					}
-					if(DifferenzPos == 125000){
-						WellenWert[a] = 2;
+					if(DifferenzPos >= 85000 & DifferenzPos <=110000){
+						strcat( WellenWert , "10");
 					}
-					if(DifferenzPos == 125000){
-						WellenWert[a] = 3;
+					if(DifferenzPos >= 65000 & DifferenzPos <=80000){
+						strcat(WellenWert , "11");
 					}
-					if(DifferenzPos == 100000){
-						WellenWert[a] = 1;
+					if(DifferenzPos >= 40000 & DifferenzPos <=60000){
+						strcat(WellenWert , "01");
+					}
+				}
+				if(WellenWert[i] == "11"){
+					if(DifferenzPos >= 40000 & DifferenzPos <=60000){
+						strcat( WellenWert , "00");	
+					}
+					if(DifferenzPos >= 140000 & DifferenzPos <=160000){
+						strcat( WellenWert , "10");
+					}
+					if(DifferenzPos >= 115000 & DifferenzPos <=135000){
+						strcat(WellenWert , "11");
+					}
+					if(DifferenzPos >= 85000 & DifferenzPos <=110000){
+						strcat(WellenWert , "01");
 					}
 				}
 			}

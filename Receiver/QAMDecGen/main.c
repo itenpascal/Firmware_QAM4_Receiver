@@ -205,7 +205,7 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 			DifferenzPos = HoechstwertPos2+HoechstwertPos1;
 			if(i<=3){
 				if(DifferenzPos == 100000){											// Toleranzbereich? aktuell nur perfekte Werte möglich:
-					WellenWert[a] = 0;											// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
+					WellenWert[a] = 0;												// Wie wird Synchonisiert mit den ersten peaks, aktuell wird von 0 Durchgang ausgegangen
 				}
 				if(DifferenzPos == 175000){	
 					WellenWert[a] = 2;
@@ -282,13 +282,14 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 }
 
 void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array ziehen, wie Temp
-//	uint16_t arraySynch[4] = {0};									// arraydaten von Global abspeichern
-	uint16_t arrayLenght[4] = {0};									// 
-	uint16_t arrayDifference[16] = {0};								// 
-	uint16_t arrayCRC[4] = {0};										// Checksumme
+//	uint8_t arraySynch[4] = {0};									// arraydaten von Global abspeichern
+	uint8_t arrayLenght[4] = {0};									// 
+	char binaerDifference[32] = {0};								// 
+	uint8_t arrayCRC[4] = {0};										// Checksumme
 	float temp = 0;	
 	for(;;) {
 		xEventGroupWaitBits(egEventsBits, dataBlockReady, false, true, portMAX_DELAY);	// warten bis Signalbit gesetzt
+		//binaerDifference = WellenWert;
 // 		for (int r; r <= 4; r++) {
 // 			// arraySynch[3 - r] = array[r] von vGetDifference mit 0-3;						// reihenfolge umkehren (
 // 			
@@ -300,6 +301,7 @@ void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array 
 		for (int r; r <= 16; r++) {
 			// arrayDifference[15 - r] = array[r + 8] von vGetDifference mit 0-3;						// reihenfolge umkehren (
 			
+			
 		}
 		for (int r; r <= 4; r++) {
 			// arrayCRC[3 - r] = array[r + 24] von vGetDifference mit 0-3;						// reihenfolge umkehren (
@@ -307,10 +309,11 @@ void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array 
 		}
 		
 		/* 
-		
 		 Umrechnen der Daten
-		 
 		*/ 
+		
+		
+		// sprintf(temp,"%.7f",);	
 		
 	//	claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
 		dataTemp(0, temp);										// 0 = schreiber, temp = Daten

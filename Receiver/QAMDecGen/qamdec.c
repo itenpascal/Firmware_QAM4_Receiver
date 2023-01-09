@@ -61,11 +61,7 @@ void vQuamDec(void* pvParameters)
 			if(xQueueReceive(decoderQueue, &bufferelement[0], portMAX_DELAY) == pdTRUE) {
 				if (xEventGroupGetBits(egEventBits) & RISEEDGE) {								// wenn bit NICHT aktiv
 					
-				} else {
-					
-					
-					
-					
+				} else {					
 					for(; r <= NR_OF_ARRAY_2D - 1; r++) {										// alle bufferelemente prüfen 
 						if (bufferelement[r] > (adWert/1.8)) {									// wenn bufferelement ausserhalb idle Bereich
 							speicher[3] = speicher[2];

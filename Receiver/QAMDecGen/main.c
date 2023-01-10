@@ -126,16 +126,16 @@ int main(void)
 	vInitClock();
 	vInitDisplay();
 	
-	initDAC();			// 2B commented out during real-testing, saving some space and further
-	initDACTimer();		// 2B commented out during real-testing, saving some space and further
-	initGenDMA();		// 2B commented out during real-testing, saving some space and further
+//	initDAC();			// 2B commented out during real-testing, saving some space and further
+//	initDACTimer();		// 2B commented out during real-testing, saving some space and further
+//	initGenDMA();		// 2B commented out during real-testing, saving some space and further
 	initADC();
 	initADCTimer();
 	initDecDMA();
 	//dataPointer(0,0);
 	egEventsBits = xEventGroupCreate();
 	
-	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 1, NULL);			// 2B commented out during real-testing, saving some space and further
+//	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 1, NULL);			// 2B commented out during real-testing, saving some space and further
 	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
 	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 2, NULL);
 	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 400, NULL, 2, NULL);
@@ -161,27 +161,34 @@ void vGetPeak( void *pvParameters ) {
 	int c = 0;																			// zähler für den addresspointer im Array 2
 	uint16_t actualPeak = 0;															// Zwischenspeicher des höchsten Werts
 	for (;;) {
-		if (speicherWrite - counterWaveLenghtEnd > 32){
+		if ((speicherWrite - counterWaveLenghtEnd) > 32){
 			counterWaveLenghtEnd = speicherWrite;
-			counterWaveLenghtstart = counterWaveLenghtEnd -32;
-			for (int a = counterWaveLenghtstart; a < counterWaveLenghtEnd; a++) {		// für 32 Werte pro welle höchstwert ermitteln
-				if(array[a] > actualPeak) {												// Finden vom Höchstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
-					actualPeak = array[a];												// Übergabe vom neuen Höchstwert
-					array2[c] = a%32;													// Position vom Höchstwert der welle wird gespeichert
+			for (int b = 0; b <= ((int)speicherWrite/counterWaveLenghtstart); b++) {
+				for (int a = counterWaveLenghtstart; a < counterWaveLenghtstart + 32; a++) {		// für 32 Werte pro welle höchstwert ermitteln
+					if(array[a%256] > actualPeak) {												// Finden vom Höchstwert der Welle das jeweils nur bei dem H�chstwert der steigenden Welle
+						actualPeak = array[a%256];												// Übergabe vom neuen Höchstwert
+						array2[c] = a%32;													// Position vom Höchstwert der welle wird gespeichert
+					}
 				}
+				c++;
+				counterWaveLenghtstart = counterWaveLenghtstart + 32;
+				if (counterWaveLenghtstart >= 4*NR_OF_ARRAY_WHOLE) {
+					counterWaveLenghtstart = 0;
+				}
+ 				if (c >= NR_OF_ARRAY_1D) {
+					c = 0;
+					counterWaveLenghtstart = 0;
+					xEventGroupSetBits(egEventsBits,dataBlockReady);
+				}
+				actualPeak = 0;																// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
+	// 			speicherRead_1D++;
 			}
-			c++;
- 			if (c >= NR_OF_ARRAY_1D) {
-				c = 0;
-			}
-			actualPeak = 0;																// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
-			speicherRead_1D++;
-		}
-		if(speicherRead_1D >=28) {														// Rücksetzen  auf 0 wenn max + 1
-			speicherRead_1D = 0;
-			xEventGroupSetBits(egEventsBits,dataBlockReady);
-		}
-		vTaskDelay(5/ portTICK_RATE_MS );
+// 		if(speicherRead_1D >=28) {														// Rücksetzen  auf 0 wenn max + 1
+// 			speicherRead_1D = 0;
+//			xEventGroupSetBits(egEventsBits,dataBlockReady);
+//		}
+	}
+		vTaskDelay(2/ portTICK_RATE_MS );
 	}
 	// vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nötig
 }
@@ -329,7 +336,7 @@ void GetDifference( void *pvParameters ) {												// Task bestimmt die Zeit 
 		xEventGroupSetBits(egEventsBits,binaryReady);
 		xEventGroupClearBits(egEventsBits,dataBlockReady);
 	//	a = 0;
-		vTaskDelay( 5 / portTICK_RATE_MS );
+		vTaskDelay( 2 / portTICK_RATE_MS );
 		//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht n�tig
 	}
 }

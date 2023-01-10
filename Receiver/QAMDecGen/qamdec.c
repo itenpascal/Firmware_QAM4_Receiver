@@ -49,7 +49,7 @@ void vQuamDec(void* pvParameters)
 	xEventGroupClearBits(egEventBits,RISEEDGE);
 	uint16_t bufferelement[NR_OF_SAMPLES];														// 32 Samples max
 	uint16_t speicher[4] = {10000, 10000, 10000, 10000};										// speicher f�r peakfinder initialisierung
-	uint16_t adWert = 2200;																		// maxwert TBD
+	uint16_t adWert = 800;																		// maxwert TBD
 	static int speicher_1D = 0;
 	unsigned int a = 0;
 	unsigned int r = 0;					// für 32er Loop

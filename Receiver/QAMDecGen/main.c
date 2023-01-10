@@ -46,7 +46,7 @@ TaskHandle_t calculator;
 uint16_t array[NR_OF_ARRAY_WHOLE] = {0};			// 256 Speicherplätze; darf nicht static sein (?) Fehlereldung; in qamdec.h & qam.dec.c als extern
 static uint16_t array2[NR_OF_ARRAY_1D] = {0};		// den arrayplatz speichern an welcher Stelle der Peak ist f�r reveserse engineering welcher Bitwert
 uint16_t speicherWrite = 0;
-char  WellenWert[56] = {NULL};						// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle bei Difference Rechnung
+static char  WellenWert[56] = {NULL};						// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle bei Difference Rechnung
 	
 // EventGroup for different Reasons
 EventGroupHandle_t egEventsBits = NULL;
@@ -101,7 +101,6 @@ void claimRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
 			vTaskDelay(2);
 		}
 	}
-	
 }
 
 void releaseRWLock(RWLockManagement_t * Lock, unsigned short Mode) {
@@ -139,7 +138,7 @@ int main(void)
 	xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 1, NULL);			// 2B commented out during real-testing, saving some space and further
 	xTaskCreate(vQuamDec, NULL, configMINIMAL_STACK_SIZE + 500, NULL, 1, NULL);
 	xTaskCreate(vGetPeak, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 2, NULL);
-	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 2, NULL);
+	xTaskCreate(GetDifference, NULL, configMINIMAL_STACK_SIZE + 400, NULL, 2, NULL);
 	xTaskCreate(vCalcData, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 2, calculator);
 	xTaskCreate(vDisplay, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 3, NULL);		// https://www.mikrocontroller.net/topic/1198
 
@@ -175,7 +174,7 @@ void vGetPeak( void *pvParameters ) {
  			if (c >= NR_OF_ARRAY_1D) {
 				c = 0;
 			}
-			actualPeak = 0;															// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
+			actualPeak = 0;																// Für nächste Runde wieder auf 0 damit wieder hochgearbeitet werden kann
 			speicherRead_1D++;
 		}
 		if(speicherRead_1D >=28) {														// Rücksetzen  auf 0 wenn max + 1
@@ -187,18 +186,17 @@ void vGetPeak( void *pvParameters ) {
 	// vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht nötig
 }
 
-void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit zwischen den höchstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.	
-	uint32_t TimeTable[32] = {3125,6250,9375,12500,15625,18750,21875,25000,			// TimeTable wo die MessPunkte in 10^-8 Sekunden hinterlegt sind.
+void GetDifference( void *pvParameters ) {												// Task bestimmt die Zeit zwischen den höchstwerten der Wellen die im array2 gespeichert sind. 1 Messpunkt alle 31.25 uS.	
+	uint32_t TimeTable[32] = {3125,6250,9375,12500,15625,18750,21875,25000,				// TimeTable wo die MessPunkte in 10^-8 Sekunden hinterlegt sind.
 							  28125,31250,34375,37500,40625,43750,46875,50000,
 							  53125,56250,59375,62500,65625,68750,71875,75000,
-							  78125,81250,84375,87500,90625,93750,96875,100000};	// Wir warscheindlich nicht benötigt 06.12.2022 PS
-	uint32_t HoechstwertPos1 = 0;													// Variable för aktuelle Position vom Höchstwert
-	uint32_t HoechstwertPos2 = 0;													// Variabel för nöchste Position Höchstwert	
+							  78125,81250,84375,87500,90625,93750,96875,100000};		// Wir warscheindlich nicht benötigt 06.12.2022 PS
+	uint32_t HoechstwertPos1 = 0;														// Variable för aktuelle Position vom Höchstwert
+	uint32_t HoechstwertPos2 = 0;														// Variabel för nöchste Position Höchstwert	
 	int32_t DifferenzPos = 0;
 	int a = 0;
 	//char  WellenWert[56] = {NULL};													// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
 	uint8_t lastValue = 00;
-	char test[100] = {NULL};
 	for(;;) {
 		for(int i = 0; i <= 27; i ++){
 			xEventGroupWaitBits(egEventsBits, dataBlockReady, false, true, portMAX_DELAY);	// warten bis Signalbit gesetzt
@@ -206,195 +204,200 @@ void GetDifference( void *pvParameters ) {											// Task bestimmt die Zeit z
 			a = i+1;
 			HoechstwertPos2 = TimeTable[array2[a]];
 			DifferenzPos = HoechstwertPos2+(100000-HoechstwertPos1);
-			if(i<=3){	
-				if(DifferenzPos >= 85000 & DifferenzPos <=110000){						// 100k		0
-					strcat(WellenWert , "00");										
+			
+			if(i <= 3 | lastValue == 00) {	// 0									// wenn kleiner 3, Synchronisation, danach normal was vorher (Erster durchlauf 75k ?)
+				if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		0
+					//strcat( WellenWert , "00");	
+					WellenWert[2*i] = '0'; 
+					WellenWert[2*i+1] = '0';
 					lastValue = 00;
-					continue;															// direkt zum Schleifanfang wieder => Durchlaufszeit sparen
+					continue;														// direkt zum Schleifanfang wieder => Durchlaufszeit sparen
 				}
-				if(DifferenzPos >= 165000 & DifferenzPos <=185000){						// 175k		2
-					strcat(WellenWert , "10");
+				if(DifferenzPos >= 165000 & DifferenzPos <=185000){					// 175k		2
+					//strcat( WellenWert , "10");
+					WellenWert[2*i] = '1'; 
+				 	WellenWert[2*i+1] = '0';
 					lastValue = 10;
 					continue;
 				}
-				if(DifferenzPos >= 140000 & DifferenzPos <=160000){						// 150k		3
-					strcat(WellenWert , "11");
+				if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		3
+					//strcat(WellenWert , "11");
+					WellenWert[2*i] = '1'; 
+					WellenWert[2*i+1] = '1';
 					lastValue = 11;
 					continue;
 				}
-				if(DifferenzPos >= 115000 & DifferenzPos <=135000){						// 125k		1
-					strcat(WellenWert , "01");
+				if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		1
+					//strcat(WellenWert , "01");
+					WellenWert[2*i] = '0'; 
+					WellenWert[2*i+1] = '1';
 					lastValue = 01;
 					continue;
 				}
 			}
-			else{
-				if(lastValue == 00) {	// 0
-					if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		0
-						//strcat( WellenWert , "00");	
-						lastValue = 00;
-						continue;
-					}
-					if(DifferenzPos >= 165000 & DifferenzPos <=185000){					// 175k		2
-						//strcat( WellenWert , "10");
-						lastValue = 10;
-						continue;
-					}
-					if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		3
-						//strcat(WellenWert , "11");
-						lastValue = 11;
-						continue;
-					}
-					if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		1
-						//strcat(WellenWert , "01");
-						lastValue = 01;
-						continue;
-					}
+			if(lastValue == 01){		// 1
+				if(DifferenzPos >= 65000 & DifferenzPos <= 85000){					// 75k		0
+					//strcat( WellenWert , "00");
+					WellenWert[2*i] = '0'; 
+					WellenWert[2*i+1] = '0';	
+					lastValue = 00;
+					continue;
 				}
-				if(lastValue == 01){		// 1
-					if(DifferenzPos == 75000){											// 75k		0
-						//strcat( WellenWert , "00");	
-						lastValue = 00;
-						continue;
-					}
-					if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		2
-						//strcat( WellenWert , "10");
-						lastValue = 10;
-						continue;
-					}
-					if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		3
-						//strcat(WellenWert , "11");
-						lastValue = 11;
-						continue;
-					}
-					if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		1
-						//strcat(WellenWert , "01");
-						lastValue = 01;
-						continue;
-					}
+				if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		2
+					//strcat( WellenWert , "10");
+					WellenWert[2*i] = '1'; 
+					WellenWert[2*i+1] = '0';
+					lastValue = 10;
+					continue;
 				}
-				if(lastValue == 10){		// 2
-					if(DifferenzPos >= 15000 & DifferenzPos <=35000){					// 25k		0
-						//strcat( WellenWert , "00");	
-						lastValue = 00;
-						continue;
-					}
-					if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		2
-						//strcat( WellenWert , "10");
-						lastValue = 10;
-						continue;
-					}
-					if(DifferenzPos >= 65000 & DifferenzPos <=80000){					// 75k		3
-						//strcat(WellenWert , "11");
-						lastValue = 11;
-						continue;
-					}
-					if(DifferenzPos >= 40000 & DifferenzPos <=60000){					// 50k		1
-						//strcat(WellenWert , "01");
-						lastValue = 01;
-						continue;
-					}
+				if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		3
+					//strcat(WellenWert , "11");
+					WellenWert[2*i] = '1'; 
+					WellenWert[2*i+1] = '1';
+					lastValue = 11;
+					continue;
 				}
-				if(lastValue == 11){		//	3
-					if(DifferenzPos >= 40000 & DifferenzPos <=60000){					// 50k		0
-						//strcat( WellenWert , "00");	
-						lastValue = 00;
-						continue;
-					}
-					if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		2	
-						//strcat( WellenWert , "10");
-						lastValue = 10;
-						continue;
-					}
-					if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		3	
-						//strcat(WellenWert , "11");
-						lastValue = 11;
-						continue;
-					}
-					if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		1
-						//strcat(WellenWert , "01");
-						lastValue = 01;
-						continue;
-					}
+				if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		1
+					//strcat(WellenWert , "01");
+					WellenWert[2*i] = '0'; 
+					WellenWert[2*i+1] = '1';
+					lastValue = 01;
+					continue;
+				}
+			}
+			if(lastValue == 10){		// 2
+				if(DifferenzPos >= 15000 & DifferenzPos <=35000){					// 25k		0
+					//strcat( WellenWert , "00");	
+					WellenWert[2*i] = '0'; 
+					WellenWert[2*i+1] = '0';
+					lastValue = 00;
+					continue;
+				}
+				if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		2
+					//strcat( WellenWert , "10");
+					WellenWert[2*i] = '1'; 
+					WellenWert[2*i+1] = '0';
+					lastValue = 10;
+					continue;
+				}
+				if(DifferenzPos >= 65000 & DifferenzPos <=80000){					// 75k		3
+					//strcat(WellenWert , "11");
+					WellenWert[2*i] = '1'; 
+					WellenWert[2*i+1] = '1';
+					lastValue = 11;
+					continue;
+				}
+				if(DifferenzPos >= 40000 & DifferenzPos <=60000){					// 50k		1
+					//strcat(WellenWert , "01");
+					WellenWert[2*i] = '0'; 
+					WellenWert[2*i+1] = '1';
+					lastValue = 01;
+					continue;
+				}
+			}
+			if(lastValue == 11){		//	3
+				if(DifferenzPos >= 40000 & DifferenzPos <=60000){					// 50k		0
+					//strcat( WellenWert , "00");	
+					WellenWert[2*i] = '0'; 
+					WellenWert[2*i+1] = '0';
+					lastValue = 00;
+					continue;
+				}
+				if(DifferenzPos >= 140000 & DifferenzPos <=160000){					// 150k		2	
+					//strcat( WellenWert , "10");
+					WellenWert[2*i] = '1'; 
+					WellenWert[2*i+1] = '0';
+					lastValue = 10;
+					continue;
+				}
+				if(DifferenzPos >= 115000 & DifferenzPos <=135000){					// 125k		3	
+					//strcat(WellenWert , "11");
+					WellenWert[2*i] = '1'; 
+					WellenWert[2*i+1] = '1';
+					lastValue = 11;
+					continue;
+				}
+				if(DifferenzPos >= 85000 & DifferenzPos <=110000){					// 100k		1
+					//strcat(WellenWert , "01");	
+					WellenWert[2*i] = '0'; 
+					WellenWert[2*i+1] = '1';
+					lastValue = 01;
+					continue;
 				}
 			}
 		}
 		xEventGroupSetBits(egEventsBits,binaryReady);
 		xEventGroupClearBits(egEventsBits,dataBlockReady);
+	//	a = 0;
 		vTaskDelay( 5 / portTICK_RATE_MS );
 		//vTaskSuspend;																	// Damit keine Resourcen besetzt wenn nicht n�tig
 	}
 }
 
-void vCalcData( void *pvParameters ) {								// Nützliche Daten aus dem Array ziehen, wie Temp
-//	uint8_t arraySynch[4] = {0};									// arraydaten von Global abspeichern
-	uint8_t arrayLenght[4] = {0};									// 
-	char binaerDifference[32] = {0};								// 
-	uint8_t arrayCRC[4] = {0};										// Checksumme
+void vCalcData( void *pvParameters ) {													// Nützliche Daten aus dem Array ziehen, wie Temp
+//	uint8_t arraySynch[4] = {0};														// arraydaten von Global abspeichern
+//	uint8_t arrayLenght[4] = {0};														//  
+//	uint8_t arrayCRC[4] = {0};															// Checksumme
 	float temp = 0;	
 	for(;;) {
-		xEventGroupWaitBits(egEventsBits, binaryReady, false, true, portMAX_DELAY);	// warten bis Signalbit gesetzt
+		xEventGroupWaitBits(egEventsBits, binaryReady, false, true, portMAX_DELAY);		// warten bis Signalbit gesetzt
 		//binaerDifference = WellenWert;
-// 		for (int r; r <= 4; r++) {
-// 			// arraySynch[3 - r] = array[r] von vGetDifference mit 0-3;						// reihenfolge umkehren (
+// 		for (int r = 7; r >= 0; r--) {
+// 			// arraySynch[3 - r] = array[r] von vGetDifference mit 0-3;					// 
 // 			
 // 		}
-		for (int r; r <= 4; r++) {
-			// arrayLenght[3 - r] = array[r + 4] von vGetDifference mit 0-3;						// reihenfolge umkehren (
+		for (int r = 15; r >= 8; r--) {
+			// arrayLenght[3 - r] = array[r + 4] von vGetDifference mit 0-3;			// 
 			
 		}
-		for (int r; r <= 16; r++) {
-			// arrayDifference[15 - r] = array[r + 8] von vGetDifference mit 0-3;						// reihenfolge umkehren (
-			
+		for (int r = 47; r >= 16; r--) {												// Verkehrte Reihenfolge gesendet, heisst hier wird es wieder richtiggestellt
+			// arrayDifference[15 - r] = array[r + 8] von vGetDifference mit 0-3;		// 
+ 			if(WellenWert[r] == 49) {													// Binär Zähler alle 1nsen (Ascii 48 = 0, 49 = 1)
+ 				temp = temp + pow(2,r -16);												// 
+ 			}
+		}
+		for (int r = 55; r >= 48; r--) {
+			// arrayCRC[3 - r] = array[r + 24] von vGetDifference mit 0-3;				// 
 			
 		}
-		for (int r; r <= 4; r++) {
-			// arrayCRC[3 - r] = array[r + 24] von vGetDifference mit 0-3;						// reihenfolge umkehren (
-			
-		}
 		
-		/* 
-		 Umrechnen der Daten
-		*/ 
-		
-		
-		// sprintf(temp,"%.7f",);	
-		
-	//	claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
-		dataTemp(0, temp);										// 0 = schreiber, temp = Daten
-	//	releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
-		xEventGroupClearBits(egEventsBits,binaryReady);		// Rücksetzen der Signalbits
+	//	claimRWLock(myLock, LOCK_WRITER);												// sperren des Zugriffs auf diese Daten
+		dataTemp(0, temp/1000);															// 0 = Schreiber, temp = Daten
+	//	releaseRWLock(myLock, LOCK_WRITER);												// freigeben des Zugriffs auf die Daten
+		xEventGroupClearBits(egEventsBits,binaryReady);									// Rücksetzen der Signalbits
+		temp = 0;
 		strcpy(WellenWert, "");
-		vTaskDelay(100);
+		vTaskDelay(10);
 	}
 } 
 
 float dataTemp (int mode, float temp) {
 	static float temperature;
 	switch (mode) {
-	case 0:							// schreiben
+	case 0:					// schreiben
 		temperature = temp;
 		break;
-	case 1:							// lesen
+	case 1:					// lesen
 		return temperature;
 		//break; 
 	}
 }
 			
-void vDisplay( void *pvParameters ) {			// von Binär zu Temp rechnen
-	int test = 0;								// TBD löschen wenn temp erfolgreich übergeben möglich
-	float temp = 0;
-	bool halfSec = 0;							// Datenabholen ale .5 Sekunden, darstellen jede Sekunde 
+void vDisplay( void *pvParameters ) {													// von Binär zu Temp rechnen
+	int test = 0;																		// TBD löschen wenn temp erfolgreich übergeben möglich
+	double temp = 0;
+	bool halfSec = 0;																	// Datenabholen ale .5 Sekunden, darstellen jede Sekunde 
 	for(;;) {
-	//	claimRWLock(myLock, LOCK_WRITER);						// sperren des Zugriffs auf diese Daten
-		temp = round(dataTemp(1,0)) + 0.005; // 0.0005			// 1 = leser, 0 keine Daten
-	//	releaseRWLock(myLock, LOCK_WRITER);						// freigeben des Zugriffs auf die Daten
+	//	claimRWLock(myLock, LOCK_WRITER);												// sperren des Zugriffs auf diese Daten
+		//temp = round(dataTemp(1,0)) + 0.005; // 0.0005									// 1 = Leser, 0 keine Daten
+		temp = dataTemp(1,0);
+	//	releaseRWLock(myLock, LOCK_WRITER);												// freigeben des Zugriffs auf die Daten
 		if (halfSec) {
 			vDisplayClear();
 			vDisplayWriteStringAtPos(0,0,"QAM - Projekt");
 			vDisplayWriteStringAtPos(1,0,"TSE 2009");
-			vDisplayWriteStringAtPos(2,0,"");
-			vDisplayWriteStringAtPos(3,0,"Temperatur: %d G C", test);
+			vDisplayWriteStringAtPos(2,0,"Counter up %d", test);
+			vDisplayWriteStringAtPos(3,0,"Temperatur: %f", temp);
 			halfSec = false;
 		} else {
 			halfSec = true;

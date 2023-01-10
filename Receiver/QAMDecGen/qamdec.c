@@ -45,11 +45,10 @@ void vQuamDec(void* pvParameters)
 	while(evDMAState == NULL) {
 		vTaskDelay(3/portTICK_RATE_MS);
 	}
+	
 	xEventGroupClearBits(egEventBits,RISEEDGE);
 	uint16_t bufferelement[NR_OF_SAMPLES];														// 32 Samples max
-	int block = 0;
-	uint64_t runner = 0;																		// runner, just counts up by Nr_of_samples to 2^64
-	uint16_t speicher[4] = {10000, 10000, 10000, 10000};																	// speicher f�r peakfinder	
+	uint16_t speicher[4] = {10000, 10000, 10000, 10000};										// speicher f�r peakfinder initialisierung
 	uint16_t adWert = 2200;																		// maxwert TBD
 	static int speicher_1D = 0;
 	unsigned int a = 0;

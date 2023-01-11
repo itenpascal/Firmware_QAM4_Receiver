@@ -49,9 +49,8 @@ void vQuamDec(void* pvParameters)
 	xEventGroupClearBits(egEventBits,RISEEDGE);
 	uint16_t bufferelement[NR_OF_SAMPLES];														// 32 Samples max
 	uint16_t speicher[4] = {10000, 10000, 10000, 10000};										// speicher f�r peakfinder initialisierung
-	uint16_t adWert = 800;																		// maxwert TBD
-	static int speicher_1D = 0;
-	unsigned int a = 0;
+	uint16_t adWert = 800;																		// maxwert
+	unsigned int a = 0;					// Zähler für 4 * 256 er loop (für Datenspeicherung) Loop
 	unsigned int r = 0;					// für 32er Loop
 	
 	xEventGroupWaitBits(evDMAState, DMADECREADY, false, true, portMAX_DELAY);
@@ -83,11 +82,11 @@ void vQuamDec(void* pvParameters)
  						array[a % NR_OF_ARRAY_WHOLE] = bufferelement[a % NR_OF_ARRAY_2D];		// speichern aktueller Wert
  						speicherWrite = a;														// abgeschlossener Schreibzyklus speicher f�r readTask
 						a++;																	// raufzählen, vor nächstem if, damit richtig geteilt wird
-						if ((a % NR_OF_ARRAY_2D) == 0) {
+						if ((a % NR_OF_ARRAY_2D) == 0) {										// damit bei 32 Runde abgeschlossen wird
 							break;
 						}
  					}
-					if(a >= 4*NR_OF_ARRAY_WHOLE) {												// Speicher wieder zur�cksetzen
+					if(a >= 4*NR_OF_ARRAY_WHOLE) {												// Speicher wieder zurücksetzen
 						speicher[0] = 10000;														
 						speicher[1] = 10000;
 						speicher[2] = 10000;

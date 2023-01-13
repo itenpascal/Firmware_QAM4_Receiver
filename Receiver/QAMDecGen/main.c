@@ -132,7 +132,7 @@ int main(void)
 	initADC();
 	initADCTimer();
 	initDecDMA();
-	//dataPointer(0,0);
+	
 	egEventsBits = xEventGroupCreate();
 	
 	//xTaskCreate(vQuamGen, NULL, configMINIMAL_STACK_SIZE, NULL, 1, NULL);			// 2B commented out during real-testing, saving some space and further
@@ -142,20 +142,13 @@ int main(void)
 	xTaskCreate(vCalcData, NULL, configMINIMAL_STACK_SIZE + 200, NULL, 2, calculator);
 	xTaskCreate(vDisplay, NULL, configMINIMAL_STACK_SIZE + 100, NULL, 3, NULL);		// https://www.mikrocontroller.net/topic/1198
 
-
 	vDisplayClear();
-	//vDisplayWriteStringAtPos(0,0,"FreeRTOS 10.0.1");
-	//vDisplayWriteStringAtPos(1,0,"EDUBoard 1.0");
-	//vDisplayWriteStringAtPos(2,0,"QAMDECGEN-Base");
-	//vDisplayWriteStringAtPos(3,0,"ResetReason: %d", reason);
 	vTaskStartScheduler();
 	return 0;
 }
 
 void vGetPeak( void *pvParameters ) {
-	//int c;													// Peaks aus dem Array mit allen 28 Wellen lesen und diese in einem Weiteren Array abspeichern
 	static int speicherRead_1D = 0;
-	//uint16_t speicherPointer[NR_OF_ARRAY_1D] = {0};									// Zeigt die aktuelle Position wo geschrieben wird
 	uint16_t counterWaveLenghtstart = 0;												// definiert ab wo die Welle beginnt 
 	uint16_t counterWaveLenghtEnd = 0;													// definiert bis wo gelesen wird wenn Ende
 	int c = 0;																			// zähler für den addresspointer im Array 2
@@ -197,7 +190,6 @@ void GetDifference( void *pvParameters ) {												// Task bestimmt die Zeit 
 	uint32_t HoechstwertPos2 = 0;														// Variabel för nöchste Position Höchstwert	
 	int32_t DifferenzPos = 0;
 	int a = 0;
-	//char  WellenWert[56] = {NULL};													// Empfangen Daten in einem Array. Zugeortnet mit dem Wert 00 / 01 / 10 / 11 pro welle
 	uint8_t lastValue = 00;
 	for(;;) {
 		for(int i = 0; i <= 27; i ++){
@@ -345,21 +337,17 @@ void vCalcData( void *pvParameters ) {													// Nützliche Daten aus dem A
 		xEventGroupWaitBits(egEventsBits, binaryReady, false, true, portMAX_DELAY);		// warten bis Signalbit gesetzt
 		//binaerDifference = WellenWert;
  		for (int r = 7; r >= 0; r--) {													// für Länge
-// 			// arraySynch[3 - r] = array[r] von vGetDifference mit 0-3;					// 
  			
  		}
 		for (int r = 15; r >= 8; r--) {													// für Synchronisation
-			// arrayLenght[3 - r] = array[r + 4] von vGetDifference mit 0-3;			// 
 			
 		}		
 		for (int r = 47; r >= 16; r--) {												// Verkehrte Reihenfolge gesendet, heisst hier wird es wieder richtiggestellt
-			// arrayDifference[15 - r] = array[r + 8] von vGetDifference mit 0-3;		// 
  			if(WellenWert[r] == 49) {													// Binär Zähler alle 1nsen (Ascii 48 = 0, 49 = 1)
  				temp = temp + pow(2,r -16);												// 
  			}
 		}
 		for (int r = 55; r >= 48; r--) {												// für Checksumme
-			// arrayCRC[3 - r] = array[r + 24] von vGetDifference mit 0-3;				// 
 			
 		}
 		
@@ -399,7 +387,8 @@ void vDisplay( void *pvParameters ) {													// von Binär zu Temp rechnen
 			vDisplayWriteStringAtPos(0,3,"QAM4 - Projekt");
 			vDisplayWriteStringAtPos(1,6,"TSE 2009");
 			if(running) {vDisplayWriteStringAtPos(2,0,"--------------------");}
-			vDisplayWriteStringAtPos(3,0,"Temperatur: %f", temp);
+			vDisplayWriteStringAtPos(3,0,"Temp: %f", temp);
+			vDisplayWriteStringAtPos(3,14,"Grad C");
 			halfSec = false;
 		} else {
 			halfSec = true;

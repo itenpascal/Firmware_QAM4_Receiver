@@ -30,10 +30,9 @@ QueueHandle_t decoderQueue;
 EventGroupHandle_t egEventBits = NULL;
 #define RISEEDGE		0x01						// steigende Flanke erkannt
 #define STARTMEAS		0x02						// Start Measure, idletotpunkt �berschritten, start Daten speicherung f�r 22*32bit
-#define BLOCKED			0x04						// 
+//#define BLOCKED			0x04					// 
 
 extern uint16_t array[NR_OF_ARRAY_WHOLE];
-//extern uint16_t array2;
 extern uint16_t speicherWrite;
 
 void vQuamDec(void* pvParameters)
@@ -91,7 +90,6 @@ void vQuamDec(void* pvParameters)
 						speicher[1] = 10000;
 						speicher[2] = 10000;
 						speicher[3] = 10000;
-						//speicherWrite = 0;
 						xEventGroupClearBits(egEventBits,RISEEDGE);								// wenn durchgelaufen, wieder R�cksetzten f�r n�chste Starterkennung
 						a = 0;
 					}
